@@ -210,7 +210,26 @@ function App() {
 
                   <RefineKbar />
                   <UnsavedChangesNotifier />
-                  <DocumentTitleHandler />
+                  <DocumentTitleHandler 
+                      handler={({ resource, action, pathname = '' }) => {
+                        if (resource && action) {
+                          const actionLabel = action.charAt(0).toUpperCase() + action.slice(1);
+                          return `${actionLabel} ${resource.name} | Ebook Ford`;
+                        }
+                        
+                        // Handle list views
+                        const resourceFromPath = pathname.split('/')[1];
+                        if (resourceFromPath) {
+                          const resourceName = resourceFromPath
+                            .split('_')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+                          return `[${resourceName}] | Ebook Ford`;
+                        }
+                        
+                        return 'Ebook Ford';
+                      }}
+                    />
                 </Refine>
                 <DevtoolsPanel />
               </DevtoolsProvider>
