@@ -20,7 +20,7 @@ export const SiteList = () => {
 
   return (
     <List
-      headerButtons={({ defaultButtons }) => (
+      headerButtons={() => (
         <>
           <Input
             placeholder="Search sites..."
@@ -89,7 +89,7 @@ export const SiteList = () => {
         <Table.Column
           dataIndex="folderName"
           title="Site"
-          render={(value, record: any) => (
+          render={(value) => (
             <Space>
               <Avatar
                 style={{

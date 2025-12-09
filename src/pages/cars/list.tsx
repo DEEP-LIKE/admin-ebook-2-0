@@ -20,7 +20,7 @@ export const CarList = () => {
 
   return (
     <List
-      headerButtons={({ defaultButtons }) => (
+      headerButtons={() => (
         <>
           <Button
             type="primary"

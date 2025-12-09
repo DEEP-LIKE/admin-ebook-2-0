@@ -52,7 +52,7 @@ export const ImageList = () => {
 
   return (
     <List
-      headerButtons={({ defaultButtons }) => (
+      headerButtons={() => (
         <>
           {selectedRowKeys.length > 0 && (
             <Button

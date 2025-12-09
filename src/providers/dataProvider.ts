@@ -1,5 +1,20 @@
-import type { DataProvider } from "@refinedev/core";
+import { DataProvider, BaseRecord, BaseKey, GetListParams, CreateParams, UpdateParams, DeleteManyParams, GetListResponse, CreateResponse, UpdateResponse, DeleteManyResponse, Pagination } from "@refinedev/core";
 import queryString from "query-string";
+
+interface CustomVariables {
+  images?: {
+    opengraph?: {
+      rawFile?: File;
+    };
+    portada?: {
+      rawFile?: File;
+    };
+    rawFile?: File;
+  };
+  image_id?: string | number;
+  reftype?: string;
+  [key: string]: any;
+}
 
 const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
@@ -23,11 +38,17 @@ const hasImageUpload = (variables: any): boolean => {
 };
 
 export const dataProvider: DataProvider = {
-  getList: async ({ resource, pagination, filters, sorters }) => {
-    const { current = 1, pageSize = 10 } = pagination ?? {};
+  getList: async <TData extends BaseRecord = BaseRecord>({
+    resource,
+    pagination,
+    filters = [],
+    sorters = [],
+  }: GetListParams): Promise<GetListResponse<TData>> => {
+    const current = (pagination as any)?.current || 1;
+    const pageSize = (pagination as any)?.pageSize || 10;
     const { field = "id", order = "ASC" } = sorters?.[0] ?? {};
 
-    const query: any = {
+    const query: Record<string, any> = {
       page: current,
       pageSize,
       sortBy: field,
@@ -80,13 +101,13 @@ export const dataProvider: DataProvider = {
     return { data, total };
   },
 
-  getOne: async ({ resource, id }) => {
+  getOne: async ({ resource, id }: { resource: string; id: BaseKey }) => {
     const response = await fetch(`${API_URL}/${resource}/${id}`);
     const data = await response.json();
     return { data };
   },
 
-  getMany: async ({ resource, ids }) => {
+  getMany: async ({ resource, ids }: { resource: string; ids: BaseKey[] }) => {
     const query = {
       filter: JSON.stringify({ id: ids }),
     };
@@ -100,31 +121,35 @@ export const dataProvider: DataProvider = {
     return { data };
   },
 
-  create: async ({ resource, variables }) => {
-    let finalVariables = { ...variables };
+  create: async <TData extends BaseRecord = BaseRecord, TVariables = any>({
+    resource,
+    variables,
+  }: CreateParams<TVariables>): Promise<CreateResponse<TData>> => {
+    const typedVars = variables as any;
+    let finalVariables = { ...typedVars };
 
     // Manejo especial de imágenes
-    if (hasImageUpload(variables)) {
+    if (hasImageUpload(typedVars)) {
       // Si es una imagen de opengraph
-      if (variables.images?.opengraph?.rawFile) {
+      if (typedVars.images?.opengraph?.rawFile) {
         const formData = new FormData();
-        formData.append("file", variables.images.opengraph.rawFile);
+        formData.append("file", typedVars.images.opengraph.rawFile);
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "opengraph";
       }
       // Si es una imagen de portada
-      else if (variables.images?.portada?.rawFile) {
+      else if (typedVars.images?.portada?.rawFile) {
         const formData = new FormData();
-        formData.append("file", variables.images.portada.rawFile);
+        formData.append("file", typedVars.images.portada.rawFile);
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
       }
       // Si es una imagen genérica
-      else if (variables.images?.rawFile) {
+      else if (typedVars.images?.rawFile) {
         const formData = new FormData();
-        formData.append("file", variables.images.rawFile);
+        formData.append("file", typedVars.images.rawFile);
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
       }
@@ -141,20 +166,25 @@ export const dataProvider: DataProvider = {
     return { data };
   },
 
-  update: async ({ resource, id, variables }) => {
-    let finalVariables = { ...variables };
+  update: async <TData extends BaseRecord = BaseRecord, TVariables = any>({
+    resource,
+    id,
+    variables,
+  }: UpdateParams<TVariables>): Promise<UpdateResponse<TData>> => {
+    const typedVars = variables as any;
+    let finalVariables = { ...typedVars };
 
     // Manejo especial de imágenes (similar a create)
-    if (hasImageUpload(variables)) {
-      if (variables.images?.opengraph?.rawFile) {
+    if (hasImageUpload(typedVars)) {
+      if (typedVars.images?.opengraph?.rawFile) {
         const formData = new FormData();
-        formData.append("file", variables.images.opengraph.rawFile);
+        formData.append("file", typedVars.images.opengraph.rawFile);
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "opengraph";
-      } else if (variables.images?.portada?.rawFile) {
+      } else if (typedVars.images?.portada?.rawFile) {
         const formData = new FormData();
-        formData.append("file", variables.images.portada.rawFile);
+        formData.append("file", typedVars.images.portada.rawFile);
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
@@ -172,7 +202,7 @@ export const dataProvider: DataProvider = {
     return { data };
   },
 
-  deleteOne: async ({ resource, id }) => {
+  deleteOne: async ({ resource, id }: { resource: string; id: BaseKey }) => {
     const response = await fetch(`${API_URL}/${resource}/${id}`, {
       method: "DELETE",
     });
@@ -180,12 +210,28 @@ export const dataProvider: DataProvider = {
     return { data };
   },
 
-  deleteMany: async ({ resource, ids }) => {
-    const query = { filter: JSON.stringify({ id: ids }) };
-    const response = await fetch(`${API_URL}/${resource}?${queryString.stringify(query)}`, {
-      method: "DELETE",
-    });
-    return { data: ids };
+  deleteMany: async <TData extends BaseRecord = BaseRecord, TVariables = any>({
+    resource,
+    ids,
+  }: DeleteManyParams<TVariables>): Promise<DeleteManyResponse<TData>> => {
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`${API_URL}/${resource}/${id}`, {
+          method: "DELETE",
+          headers,
+        })
+      )
+    );
+
+    return {
+      data: ids.map((id) => ({ id } as unknown as TData)),
+    };
+    // Removed duplicate delete implementation
   },
 
   getApiUrl: () => API_URL,
