@@ -1,4 +1,5 @@
-import { GitHubBanner, Refine } from "@refinedev/core";
+import { Refine } from "@refinedev/core";
+import { Login } from "./pages/login";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 
@@ -7,6 +8,7 @@ import {
   ThemedLayout,
   ThemedSider,
   useNotificationProvider,
+  AuthPage,
 } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
 
@@ -15,102 +17,204 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import dataProvider from "@refinedev/simple-rest";
-import { App as AntdApp } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { Header } from "./components/header";
+import { AppTitle } from "./components/app-title";
 import { ColorModeContextProvider } from "./contexts/color-mode";
+
+// Custom Providers
+import { authProvider } from "./providers/authProvider";
+import { dataProvider } from "./providers/dataProvider";
+
+// Ford Theme
+import { fordTheme } from "./theme";
+
+// Ford Resources
 import {
-  BlogPostCreate,
-  BlogPostEdit,
-  BlogPostList,
-  BlogPostShow,
-} from "./pages/blog-posts";
+  SiteList,
+  SiteEdit,
+  SiteCreate,
+  SiteShow,
+} from "./pages/sites";
 import {
-  CategoryCreate,
-  CategoryEdit,
-  CategoryList,
-  CategoryShow,
-} from "./pages/categories";
+  ImageList,
+  ImageCreate,
+  ImageShow,
+} from "./pages/images";
+import {
+  CarList,
+  CarEdit,
+  CarCreate,
+  CarShow,
+} from "./pages/cars";
+import {
+  ContactMailList,
+  ContactMailEdit,
+  ContactMailCreate,
+  ContactMailShow,
+} from "./pages/contact_mails";
+import {
+  PromotionList,
+  PromotionEdit,
+  PromotionCreate,
+  PromotionShow,
+} from "./pages/promotions";
+
+import {
+  GlobalOutlined,
+  FileImageOutlined,
+  CarOutlined,
+  MailOutlined,
+  GiftOutlined,
+} from "@ant-design/icons";
 
 function App() {
   return (
     <BrowserRouter>
-      <GitHubBanner />
       <RefineKbarProvider>
         <ColorModeContextProvider>
           <AntdApp>
-            <DevtoolsProvider>
-              <Refine
-                notificationProvider={useNotificationProvider}
-                routerProvider={routerProvider}
-                dataProvider={dataProvider("https://api.fake-rest.refine.dev")}
-                resources={[
-                  {
-                    name: "blog_posts",
-                    list: "/blog-posts",
-                    create: "/blog-posts/create",
-                    edit: "/blog-posts/edit/:id",
-                    show: "/blog-posts/show/:id",
-                    meta: {
-                      canDelete: true,
+              <DevtoolsProvider>
+                <Refine
+                  authProvider={authProvider}
+                  notificationProvider={useNotificationProvider}
+                  routerProvider={routerProvider}
+                  dataProvider={dataProvider}
+                  resources={[
+                    {
+                      name: "sites",
+                      list: "/sites",
+                      create: "/sites/create",
+                      edit: "/sites/edit/:id",
+                      show: "/sites/show/:id",
+                      meta: {
+                        canDelete: true,
+                        icon: <GlobalOutlined />,
+                        label: "Sites",
+                      },
                     },
-                  },
-                  {
-                    name: "categories",
-                    list: "/categories",
-                    create: "/categories/create",
-                    edit: "/categories/edit/:id",
-                    show: "/categories/show/:id",
-                    meta: {
-                      canDelete: true,
+                    {
+                      name: "images",
+                      list: "/images",
+                      create: "/images/create",
+                      show: "/images/show/:id",
+                      meta: {
+                        canDelete: true,
+                        icon: <FileImageOutlined />,
+                        label: "Images",
+                      },
                     },
-                  },
-                ]}
-                options={{
-                  syncWithLocation: true,
-                  warnWhenUnsavedChanges: true,
-                  projectId: "KVbPVR-VqxjeK-1MLytf",
-                }}
-              >
-                <Routes>
-                  <Route
-                    element={
-                      <ThemedLayout
-                        Header={() => <Header sticky />}
-                        Sider={(props) => <ThemedSider {...props} fixed />}
-                      >
-                        <Outlet />
-                      </ThemedLayout>
-                    }
-                  >
-                    <Route
-                      index
-                      element={<NavigateToResource resource="blog_posts" />}
-                    />
-                    <Route path="/blog-posts">
-                      <Route index element={<BlogPostList />} />
-                      <Route path="create" element={<BlogPostCreate />} />
-                      <Route path="edit/:id" element={<BlogPostEdit />} />
-                      <Route path="show/:id" element={<BlogPostShow />} />
-                    </Route>
-                    <Route path="/categories">
-                      <Route index element={<CategoryList />} />
-                      <Route path="create" element={<CategoryCreate />} />
-                      <Route path="edit/:id" element={<CategoryEdit />} />
-                      <Route path="show/:id" element={<CategoryShow />} />
-                    </Route>
-                    <Route path="*" element={<ErrorComponent />} />
-                  </Route>
-                </Routes>
+                    {
+                      name: "cars",
+                      list: "/cars",
+                      create: "/cars/create",
+                      edit: "/cars/edit/:id",
+                      show: "/cars/show/:id",
+                      meta: {
+                        canDelete: true,
+                        icon: <CarOutlined />,
+                        label: "Cars",
+                      },
+                    },
+                    {
+                      name: "contact_mails",
+                      list: "/contact_mails",
+                      create: "/contact_mails/create",
+                      edit: "/contact_mails/edit/:id",
+                      show: "/contact_mails/show/:id",
+                      meta: {
+                        canDelete: true,
+                        icon: <MailOutlined />,
+                        label: "Contact Mails",
+                      },
+                    },
+                    {
+                      name: "promotions",
+                      list: "/promotions",
+                      create: "/promotions/create",
+                      edit: "/promotions/edit/:id",
+                      show: "/promotions/show/:id",
+                      meta: {
+                        canDelete: true,
+                        icon: <GiftOutlined />,
+                        label: "Promotions",
+                      },
+                    },
 
-                <RefineKbar />
-                <UnsavedChangesNotifier />
-                <DocumentTitleHandler />
-              </Refine>
-              <DevtoolsPanel />
-            </DevtoolsProvider>
-          </AntdApp>
+                  ]}
+                  options={{
+                    syncWithLocation: true,
+                    warnWhenUnsavedChanges: true,
+                    projectId: "KVbPVR-VqxjeK-1MLytf",
+                    title: { text: "Ebook Ford" },
+                  }}
+                >
+                  <Routes>
+                    <Route
+                      element={<Login />}
+                      path="/login"
+                    />
+                    <Route
+                      element={
+                        <ThemedLayout
+                          Header={() => <Header sticky />}
+                          Sider={(props) => <ThemedSider {...props} fixed Title={AppTitle} />}
+                        >
+                          <Outlet />
+                        </ThemedLayout>
+                      }
+                    >
+                      <Route
+                        index
+                        element={<NavigateToResource resource="sites" />}
+                      />
+                      
+                      {/* Ford Resources */}
+                      <Route path="/sites">
+                        <Route index element={<SiteList />} />
+                        <Route path="create" element={<SiteCreate />} />
+                        <Route path="edit/:id" element={<SiteEdit />} />
+                        <Route path="show/:id" element={<SiteShow />} />
+                      </Route>
+                      
+                      <Route path="/images">
+                        <Route index element={<ImageList />} />
+                        <Route path="create" element={<ImageCreate />} />
+                        <Route path="show/:id" element={<ImageShow />} />
+                      </Route>
+                      
+                      <Route path="/cars">
+                        <Route index element={<CarList />} />
+                        <Route path="create" element={<CarCreate />} />
+                        <Route path="edit/:id" element={<CarEdit />} />
+                        <Route path="show/:id" element={<CarShow />} />
+                      </Route>
+                      
+                      <Route path="/contact_mails">
+                        <Route index element={<ContactMailList />} />
+                        <Route path="create" element={<ContactMailCreate />} />
+                        <Route path="edit/:id" element={<ContactMailEdit />} />
+                        <Route path="show/:id" element={<ContactMailShow />} />
+                      </Route>
+                      
+                      <Route path="/promotions">
+                        <Route index element={<PromotionList />} />
+                        <Route path="create" element={<PromotionCreate />} />
+                        <Route path="edit/:id" element={<PromotionEdit />} />
+                        <Route path="show/:id" element={<PromotionShow />} />
+                      </Route>
+                      <Route path="*" element={<ErrorComponent />} />
+                    </Route>
+                  </Routes>
+
+                  <RefineKbar />
+                  <UnsavedChangesNotifier />
+                  <DocumentTitleHandler />
+                </Refine>
+                <DevtoolsPanel />
+              </DevtoolsProvider>
+            </AntdApp>
         </ColorModeContextProvider>
       </RefineKbarProvider>
     </BrowserRouter>

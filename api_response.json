@@ -1,0 +1,1 @@
+{"error":"Failed to fetch sites","details":"select \"sites\".* from \"sites\" where \"q\" = $1 order by \"id\" desc limit $2 - column \"q\" does not exist"}
