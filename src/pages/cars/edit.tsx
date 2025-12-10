@@ -1,36 +1,98 @@
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Input, InputNumber, Upload, Typography } from "antd";
-import { InboxOutlined, LinkOutlined } from "@ant-design/icons";
-import { useEffect } from "react";
+import { Form, Input, InputNumber, Upload, Typography, Image, Button } from "antd";
+import { InboxOutlined, LinkOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
 
 const { Text } = Typography;
 
+// Custom Input Component to handle value/onChange correctly within Form.Item
+const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
+  // Ensure value is a string and handle the leading slash for display
+  const displayValue = value?.startsWith('/') ? value.slice(1) : value || '';
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVal = e.target.value;
+    // Store with leading slash internally if not empty
+    const storedValue = newVal ? (newVal.startsWith('/') ? newVal : `/${newVal}`) : newVal;
+    onChange?.(storedValue);
+  };
+
+  return (
+    <div>
+      <Input
+        addonBefore={baseUrl}
+        size="large"
+        placeholder={placeholder}
+        style={{ borderRadius: 8 }}
+        value={displayValue}
+        onChange={handleChange}
+      />
+      {displayValue && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: "8px 12px",
+            background: "#f0f7ff",
+            borderRadius: 6,
+            border: "1px solid #d6e4ff",
+          }}
+        >
+          <LinkOutlined style={{ color: "#1890ff", marginRight: 6 }} />
+          <Text style={{ fontSize: 13, color: "#0050b3" }}>
+            URL completa: <strong>{baseUrl}{displayValue}</strong>
+          </Text>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const CarEdit = () => {
-  const { formProps, saveButtonProps, onFinish } = useForm();
+  const { formProps, saveButtonProps, queryResult, onFinish } = useForm();
+  const carData = queryResult?.data?.data;
   
-  const cotizaValue = Form.useWatch("cotiza", formProps.form);
-  const manejoValue = Form.useWatch("manejo", formProps.form);
-  const moreValue = Form.useWatch("more", formProps.form);
+  // Local state for image management
+  const [fileList, setFileList] = useState<any[]>([]);
+  const [showExistingImage, setShowExistingImage] = useState(true);
 
-  const baseUrl = "https://www.sitio-ford.mx/";
+  // When data loads, if there is an image, we show it by default
+  useEffect(() => {
+    if (carData?.image) {
+      setShowExistingImage(true);
+    }
+  }, [carData]);
 
-  // Transform data before saving - add leading slash if not present
+  const baseUrl = "https://www.sitio-ford.mx";
+
   const handleFinish = (values: any) => {
-    const transformedValues = {
-      ...values,
-      cotiza: values.cotiza && !values.cotiza.startsWith('/') ? `/${values.cotiza}` : values.cotiza,
-      manejo: values.manejo && !values.manejo.startsWith('/') ? `/${values.manejo}` : values.manejo,
-      more: values.more && !values.more.startsWith('/') ? `/${values.more}` : values.more,
-    };
-    onFinish(transformedValues);
+    // values.cotiza/manejo/more are already managed by UrlInput to have the slash, 
+    // but let's be safe and ensure it.
+    // Actually UrlInput `onChange` already sets it with slash.
+    
+    // Antd Upload puts the file in `image.file` or `image.fileList` depending on how it's used.
+    // But since we are using a controlled fileList for the Dragger, we need to ensure 
+    // the form receives the file.
+    // However, `formProps` handles the form state. 
+    // If we use `normFile` or just let Form collect `image`, it might grab the Dragger's internal state.
+    
+    // We will trust the Form to collect `image` from the Form.Item name="image".
+    // But we need to make sure the Dragger inside updates that Item.
+    onFinish(values);
   };
 
-  // Helper to transform value for display (remove leading slash)
-  const getValueProps = (value: string) => {
-    return {
-      value: value?.startsWith('/') ? value.slice(1) : value || ''
-    };
+  // When a new file is added, hide the existing image
+  const handleUploadChange = (info: any) => {
+    setFileList(info.fileList);
+    if (info.fileList.length > 0) {
+      setShowExistingImage(false);
+    } else if (carData?.image) {
+      // If user removed the new file, show existing again? 
+      // Or maybe they want to delete everything?
+      // Let's assume if list is empty, we show existing if available.
+      setShowExistingImage(true);
+    }
   };
+  
 
   return (
     <Edit saveButtonProps={saveButtonProps}>
@@ -71,32 +133,11 @@ export const CarEdit = () => {
             </span>
           }
           name="cotiza"
-          getValueProps={getValueProps}
         >
-          <div>
-            <Input
-              addonBefore={baseUrl}
-              size="large"
-              placeholder="TERRITORY-HIBRIDA/26/cotizacion"
-              style={{ borderRadius: 8 }}
-            />
-            {cotizaValue && (
-              <div
-                style={{
-                  marginTop: 8,
-                  padding: "8px 12px",
-                  background: "#f0f7ff",
-                  borderRadius: 6,
-                  border: "1px solid #d6e4ff",
-                }}
-              >
-                <LinkOutlined style={{ color: "#1890ff", marginRight: 6 }} />
-                <Text style={{ fontSize: 13, color: "#0050b3" }}>
-                  URL completa: <strong>{baseUrl}{cotizaValue}</strong>
-                </Text>
-              </div>
-            )}
-          </div>
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY-HIBRIDA/26/cotizacion" 
+          />
         </Form.Item>
 
         <Form.Item
@@ -110,32 +151,11 @@ export const CarEdit = () => {
             </span>
           }
           name="manejo"
-          getValueProps={getValueProps}
         >
-          <div>
-            <Input
-              addonBefore={baseUrl}
-              size="large"
-              placeholder="TERRITORY/26/PruebadeManejo"
-              style={{ borderRadius: 8 }}
-            />
-            {manejoValue && (
-              <div
-                style={{
-                  marginTop: 8,
-                  padding: "8px 12px",
-                  background: "#f0f7ff",
-                  borderRadius: 6,
-                  border: "1px solid #d6e4ff",
-                }}
-              >
-                <LinkOutlined style={{ color: "#1890ff", marginRight: 6 }} />
-                <Text style={{ fontSize: 13, color: "#0050b3" }}>
-                  URL completa: <strong>{baseUrl}{manejoValue}</strong>
-                </Text>
-              </div>
-            )}
-          </div>
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY/26/PruebadeManejo" 
+          />
         </Form.Item>
 
         <Form.Item
@@ -149,32 +169,11 @@ export const CarEdit = () => {
             </span>
           }
           name="more"
-          getValueProps={getValueProps}
         >
-          <div>
-            <Input
-              addonBefore={baseUrl}
-              size="large"
-              placeholder="TERRITORY/26"
-              style={{ borderRadius: 8 }}
-            />
-            {moreValue && (
-              <div
-                style={{
-                  marginTop: 8,
-                  padding: "8px 12px",
-                  background: "#f0f7ff",
-                  borderRadius: 6,
-                  border: "1px solid #d6e4ff",
-                }}
-              >
-                <LinkOutlined style={{ color: "#1890ff", marginRight: 6 }} />
-                <Text style={{ fontSize: 13, color: "#0050b3" }}>
-                  URL completa: <strong>{baseUrl}{moreValue}</strong>
-                </Text>
-              </div>
-            )}
-          </div>
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY/26" 
+          />
         </Form.Item>
 
         <Form.Item label="Terms" name="terms">
@@ -193,19 +192,54 @@ export const CarEdit = () => {
           />
         </Form.Item>
 
-        <Form.Item label="Car Image" name="image">
+        <Form.Item label="Car Image" style={{ marginBottom: 0 }}>
+             {/* Existing Image Display */}
+             {showExistingImage && carData?.image?.src && (
+              <div style={{ marginBottom: 16, border: '1px solid #d9d9d9', borderRadius: 8, padding: 16, display: 'inline-block' }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>Current Image:</div>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <Image
+                      src={carData.image.src}
+                      width={200}
+                      style={{ borderRadius: 8 }}
+                    />
+                </div>
+              </div>
+            )}
+        </Form.Item>
+
+        <Form.Item 
+            name="image" 
+            valuePropName="file"
+            getValueFromEvent={(e: any) => {
+                // Return just the file object or the event, depending on what our dataProvider expects.
+                // Our dataProvider now handles { originFileObj } or File or array.
+                // Antd Dragger returns an object { file, fileList } in onChange.
+                if (Array.isArray(e)) {
+                    return e;
+                }
+                return e && e.fileList;
+            }}
+        >
           <Upload.Dragger
+            name="file"
             maxCount={1}
             beforeUpload={() => false}
+            fileList={fileList}
+            onChange={handleUploadChange}
+            showUploadList={true}
             style={{
               borderRadius: 12,
               border: "2px dashed #d9d9d9",
+              background: showExistingImage ? '#fafafa' : '#fff'
             }}
           >
             <p className="ant-upload-drag-icon">
               <InboxOutlined style={{ color: "#003478" }} />
             </p>
-            <p className="ant-upload-text">Click or drag car image</p>
+            <p className="ant-upload-text">
+                {showExistingImage ? "Click or drag to replace image" : "Click or drag car image"}
+            </p>
             <p className="ant-upload-hint">Recommended: 1200x800px</p>
           </Upload.Dragger>
         </Form.Item>
