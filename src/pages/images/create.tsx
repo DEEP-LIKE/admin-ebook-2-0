@@ -33,8 +33,7 @@ export const ImageCreate = () => {
             allowClear
             options={[
               { value: "opengraph", label: "OpenGraph" },
-              { value: "portada", label: "Portada (Cover)" },
-              { value: "cover", label: "Cover" },
+              { value: "portada", label: "Portada (Cover)" }
             ]}
           />
         </Form.Item>
