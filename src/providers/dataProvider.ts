@@ -170,13 +170,13 @@ export const dataProvider: DataProvider = {
             const uploaded = await uploadImage(formData);
             if (uploaded && uploaded.id) {
                 finalVariables.image_id = uploaded.id;
+                finalVariables.image = uploaded.id;
             } else {
                 console.error("Upload failed or returned no ID", uploaded);
             }
         } catch (error) {
             console.error("Error uploading singular image", error);
         }
-        delete finalVariables.image;
       }
 
       // 2. 'images' field (Images resource, potentially multiple but handled as single for convenience if needed, 
@@ -273,10 +273,10 @@ export const dataProvider: DataProvider = {
           try {
             const uploaded = await uploadImage(formData);
             finalVariables.image_id = uploaded.id;
+            finalVariables.image = uploaded.id;
           } catch(e) {
               console.error("Update upload failed", e);
           }
-          delete finalVariables.image;
       }
 
       // 2. Nested specific fields

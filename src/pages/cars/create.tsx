@@ -73,10 +73,22 @@ export const CarCreate = () => {
           />
         </Form.Item>
 
-        <Form.Item label="Car Image" name="image">
+        <Form.Item 
+          label="Car Image" 
+          name="image"
+          valuePropName="file"
+          getValueFromEvent={(e: any) => {
+            if (Array.isArray(e)) {
+              return e;
+            }
+            return e && e.fileList;
+          }}
+        >
           <Upload.Dragger
+            name="file"
             maxCount={1}
             beforeUpload={() => false}
+            listType="picture"
             style={{
               borderRadius: 12,
               border: "2px dashed #d9d9d9",
