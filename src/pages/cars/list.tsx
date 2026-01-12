@@ -1,16 +1,25 @@
-import { List, useTable, EditButton, ShowButton, DeleteButton, FilterDropdown } from "@refinedev/antd";
+import { List, useTable, EditButton, ShowButton, DeleteButton } from "@refinedev/antd";
 import { Table, Space, Tag, Image, Button, Input } from "antd";
 import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router";
 
 export const CarList = () => {
-  const { tableProps } = useTable({
+  const { tableProps, setFilters } = useTable({
     syncWithLocation: true,
     sorters: {
       initial: [
         {
           field: "menu_position",
           order: "asc",
+        },
+      ],
+    },
+    filters: {
+      initial: [
+        {
+          field: "name",
+          operator: "contains",
+          value: "",
         },
       ],
     },
@@ -37,6 +46,23 @@ export const CarList = () => {
         </>
       )}
     >
+       <div style={{ marginBottom: 16, maxWidth: 400 }}>
+        <Input
+          placeholder="Search by name..."
+          prefix={<SearchOutlined style={{ color: "rgba(0,0,0,.25)" }} />}
+          onChange={(e) => {
+             const value = e.target.value;
+             setFilters([
+                {
+                  field: "name",
+                  operator: "contains",
+                  value: value,
+                }
+             ]);
+          }}
+          allowClear
+        />
+      </div> 
       <Table
         {...tableProps}
         rowKey="id"
@@ -113,14 +139,6 @@ export const CarList = () => {
         <Table.Column
           dataIndex="name"
           title="Name"
-          filterIcon={(filtered) => (
-            <SearchOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
-          )}
-          filterDropdown={(props) => (
-            <FilterDropdown {...props}>
-              <Input placeholder="Search name" />
-            </FilterDropdown>
-          )}
           render={(value) => (
             <div style={{ fontWeight: 600, color: "#1a1a1a" }}>{value}</div>
           )}
