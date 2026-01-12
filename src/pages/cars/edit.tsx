@@ -210,7 +210,7 @@ export const CarEdit = () => {
 
         <Form.Item 
             name="image" 
-            valuePropName="file"
+            valuePropName="fileList"
             getValueFromEvent={(e: any) => {
                 // Return just the file object or the event, depending on what our dataProvider expects.
                 // Our dataProvider now handles { originFileObj } or File or array.

@@ -76,7 +76,7 @@ export const CarCreate = () => {
         <Form.Item 
           label="Car Image" 
           name="image"
-          valuePropName="file"
+          valuePropName="fileList"
           getValueFromEvent={(e: any) => {
             if (Array.isArray(e)) {
               return e;
