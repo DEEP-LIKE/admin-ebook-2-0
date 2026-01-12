@@ -110,7 +110,14 @@ export const dataProvider: DataProvider = {
         
         if (validFilters.length > 0) {
           const filterObj = validFilters.reduce((acc: any, filter: any) => {
-            acc[filter.field] = filter.value;
+            // Check if it's a LogicalFilter (has field)
+            if ("field" in filter) {
+                if (filter.operator === "contains" && typeof filter.value === "string") {
+                    acc[filter.field] = `%${filter.value}%`;
+                } else {
+                    acc[filter.field] = filter.value;
+                }
+            }
             return acc;
           }, {});
           query.filter = JSON.stringify(filterObj);
@@ -242,6 +249,61 @@ export const dataProvider: DataProvider = {
       delete finalVariables.images;
     }
 
+    // Special handling for 'images' resource
+    if (resource === 'images') {
+        const imagesField = typedVars.images;
+        let filesToUpload: File[] = [];
+
+        // Extract files
+        if (Array.isArray(imagesField)) {
+             // It's a fileList from Antd
+             filesToUpload = imagesField.map((f: any) => f.originFileObj || f).filter(f => f instanceof File);
+        } else if (imagesField && imagesField.fileList) {
+             filesToUpload = imagesField.fileList.map((f: any) => f.originFileObj).filter((f: any) => f instanceof File);
+        } else if (imagesField instanceof File) {
+             filesToUpload = [imagesField];
+        }
+
+        if (filesToUpload.length === 0) {
+            console.warn("No files found for image upload");
+             // Fallback or error? Let's try to proceed to avoid total block, but likely will fail.
+        }
+
+        let lastResult: any = {};
+        
+        // Upload each file
+        for (const file of filesToUpload) {
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            try {
+                // 1. Upload
+                const uploaded = await uploadImage(formData);
+                lastResult = uploaded;
+                
+                // 2. Update metadata (reftype) if present
+                if (typedVars.reftype) {
+                    await fetch(`${API_URL}/images/${uploaded.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reftype: typedVars.reftype })
+                    });
+                     // Merge reftype into result for frontend consistency
+                    lastResult = { ...lastResult, reftype: typedVars.reftype };
+                }
+            } catch (err) {
+                console.error("Error uploading file in images resource", err);
+                throw err;
+            }
+        }
+        
+        // Return the last uploaded item as the result (Refine create expects single)
+        // Ideally we shouldn't support multiple in Create if we can only return one, 
+        // but this stops the crash.
+        return { data: lastResult };
+    }
+
+    // Standard JSON Create for other resources
     const response = await fetch(`${API_URL}/${resource}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

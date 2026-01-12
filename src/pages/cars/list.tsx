@@ -1,6 +1,6 @@
-import { List, useTable, EditButton, ShowButton, DeleteButton } from "@refinedev/antd";
-import { Table, Space, Tag, Image, Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { List, useTable, EditButton, ShowButton, DeleteButton, FilterDropdown } from "@refinedev/antd";
+import { Table, Space, Tag, Image, Button, Input } from "antd";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router";
 
 export const CarList = () => {
@@ -113,6 +113,14 @@ export const CarList = () => {
         <Table.Column
           dataIndex="name"
           title="Name"
+          filterIcon={(filtered) => (
+            <SearchOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+          )}
+          filterDropdown={(props) => (
+            <FilterDropdown {...props}>
+              <Input placeholder="Search name" />
+            </FilterDropdown>
+          )}
           render={(value) => (
             <div style={{ fontWeight: 600, color: "#1a1a1a" }}>{value}</div>
           )}
