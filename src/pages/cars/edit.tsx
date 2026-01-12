@@ -48,8 +48,8 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
 };
 
 export const CarEdit = () => {
-  const { formProps, saveButtonProps, queryResult, onFinish } = useForm();
-  const carData = queryResult?.data?.data;
+  const { formProps, saveButtonProps, query, onFinish } = useForm();
+  const carData = query?.data?.data;
   
   // Local state for image management
   const [fileList, setFileList] = useState<any[]>([]);
