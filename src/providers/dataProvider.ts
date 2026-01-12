@@ -325,7 +325,27 @@ export const dataProvider: DataProvider = {
     console.log("Update into", resource, id, typedVars);
 
     // Manejo especial de imágenes (similar a create)
-    if (hasImageUpload(typedVars)) {
+    // EXCEPTION: If resource is 'images', we want to REPLACE the file, not create a new one and link ID.
+    if (resource === 'images') {
+        const file = getRawFile(typedVars.image);
+        if (file) {
+             const formData = new FormData();
+             formData.append("file", file);
+             if (typedVars.reftype) {
+                 formData.append("reftype", typedVars.reftype);
+             }
+             
+             const response = await fetch(`${API_URL}/images/${id}`, {
+                 method: 'PATCH',
+                 body: formData
+             });
+             
+             const data = await response.json();
+             return { data };
+        }
+    }
+
+    if (hasImageUpload(typedVars) && resource !== 'images') {
       
       // 1. Singular 'image'
       const singularImage = getRawFile(typedVars.image);

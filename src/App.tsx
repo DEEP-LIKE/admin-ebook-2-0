@@ -41,6 +41,7 @@ import {
   ImageList,
   ImageCreate,
   ImageShow,
+  ImageEdit,
 } from "./pages/images";
 import {
   CarList,
@@ -98,6 +99,7 @@ function App() {
                       name: "images",
                       list: "/images",
                       create: "/images/create",
+                      edit: "/images/edit/:id",
                       show: "/images/show/:id",
                       meta: {
                         canDelete: true,
@@ -181,6 +183,7 @@ function App() {
                       <Route path="/images">
                         <Route index element={<ImageList />} />
                         <Route path="create" element={<ImageCreate />} />
+                        <Route path="edit/:id" element={<ImageEdit />} />
                         <Route path="show/:id" element={<ImageShow />} />
                       </Route>
                       

@@ -1,4 +1,4 @@
-import { List, useTable, DeleteButton } from "@refinedev/antd";
+import { List, useTable, DeleteButton, EditButton } from "@refinedev/antd";
 import { Table, Space, Tag, Image, Button, Upload, message, Select } from "antd";
 import { PlusOutlined, InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router";
@@ -198,6 +198,15 @@ export const ImageList = () => {
           width={100}
           render={(_, record: any) => (
             <Space size="small">
+              <EditButton
+                hideText
+                size="small"
+                recordItemId={record.id}
+                style={{
+                    borderRadius: 6,
+                    transition: "all 0.2s",
+                }}
+              />
               <DeleteButton
                 hideText
                 size="small"
