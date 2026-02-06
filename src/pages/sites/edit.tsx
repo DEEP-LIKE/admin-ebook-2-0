@@ -169,7 +169,7 @@ export const SiteEdit = () => {
               children: (
                 <Form.Item
                   label="Select Contacts"
-                  name="contact_mails"
+                  name="contact_mails_ids"
                   help="Select the contact emails for this site"
                 >
                   <Select
@@ -177,11 +177,6 @@ export const SiteEdit = () => {
                     mode="multiple"
                     placeholder="Select contacts..."
                     style={{ width: "100%" }}
-                    options={contactOptions}
-                    onSearch={undefined}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
                   />
                 </Form.Item>
               ),

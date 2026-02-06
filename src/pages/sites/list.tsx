@@ -155,11 +155,15 @@ export const SiteList = () => {
         <Table.Column
           dataIndex="contact_mails"
           title="Contacts"
-          width={100}
-          render={(value) => (
-            <span style={{ color: "#666", fontSize: 13 }}>
-              {value?.length || 0} emails
-            </span>
+          width={250}
+          render={(value: any[]) => (
+            <Space size={[0, 4]} wrap>
+              {value?.map((item: any) => (
+                <Tag key={item.id || item} color="blue">
+                  {item.email || item}
+                </Tag>
+              )) || "0 emails"}
+            </Space>
           )}
         />
 
