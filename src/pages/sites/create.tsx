@@ -20,12 +20,32 @@ export const SiteCreate = () => {
     ],
   });
 
+  const { selectProps: contactSelectProps, query: contactQueryResult } = useSelect({
+    resource: "contact_mails",
+    optionLabel: "email",
+    optionValue: "id",
+    pagination: {
+      pageSize: 1000,
+    },
+    sorters: [
+      {
+        field: "email",
+        order: "asc",
+      },
+    ],
+  });
+
   // Enhance options with image data for custom rendering
   const carOptions = carQueryResult.data?.data.map((item: any) => ({
     label: item.name,
     value: item.id,
     image: item.image?.src,
     desc: item.menu_position,
+  }));
+
+  const contactOptions = contactQueryResult.data?.data.map((item: any) => ({
+    label: item.email,
+    value: item.id,
   }));
 
   return (
@@ -128,6 +148,29 @@ export const SiteCreate = () => {
                         </div>
                       </Space>
                     )}
+                  />
+                </Form.Item>
+              ),
+            },
+            {
+              key: "contacts",
+              label: "Contacts",
+              children: (
+                <Form.Item
+                  label="Select Contacts"
+                  name="contact_mails"
+                  help="Select the contact emails for this site"
+                >
+                  <Select
+                    {...contactSelectProps}
+                    mode="multiple"
+                    placeholder="Select contacts..."
+                    style={{ width: "100%" }}
+                    options={contactOptions}
+                    onSearch={undefined}
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
                   />
                 </Form.Item>
               ),

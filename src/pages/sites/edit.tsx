@@ -27,6 +27,21 @@ export const SiteEdit = () => {
     ],
   });
 
+  const { selectProps: contactSelectProps, query: contactQueryResult } = useSelect({
+    resource: "contact_mails",
+    optionLabel: "email",
+    optionValue: "id",
+    pagination: {
+      pageSize: 1000,
+    },
+    sorters: [
+      {
+        field: "email",
+        order: "asc",
+      },
+    ],
+  });
+
   const siteData = query.data?.data;
 
   // Enhance options with image data for custom rendering
@@ -35,6 +50,11 @@ export const SiteEdit = () => {
     value: item.id,
     image: item.image?.src,
     desc: item.menu_position,
+  }));
+
+  const contactOptions = contactQueryResult.data?.data.map((item: any) => ({
+    label: item.email,
+    value: item.id,
   }));
 
   return (
@@ -139,6 +159,29 @@ export const SiteEdit = () => {
                         </div>
                       </Space>
                     )}
+                  />
+                </Form.Item>
+              ),
+            },
+            {
+              key: "contacts",
+              label: "Contacts",
+              children: (
+                <Form.Item
+                  label="Select Contacts"
+                  name="contact_mails"
+                  help="Select the contact emails for this site"
+                >
+                  <Select
+                    {...contactSelectProps}
+                    mode="multiple"
+                    placeholder="Select contacts..."
+                    style={{ width: "100%" }}
+                    options={contactOptions}
+                    onSearch={undefined}
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
                   />
                 </Form.Item>
               ),
