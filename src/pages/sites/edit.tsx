@@ -130,7 +130,7 @@ export const SiteEdit = () => {
               children: (
                 <Form.Item
                   label="Select Cars"
-                  name="cars"
+                  name="cars_ids"
                   help="Select the cars available for this site"
                 >
                   <Select
