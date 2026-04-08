@@ -43,6 +43,7 @@ export const SiteEdit = () => {
   });
 
   const siteData = query.data?.data;
+  const logoImage = siteData?.images?.find((img: any) => img?.reftype === 'logo');
 
   // Enhance options with image data for custom rendering
   const carOptions = carQueryResult.data?.data.map((item: any) => ({
@@ -129,7 +130,7 @@ export const SiteEdit = () => {
                         Click or drag Logo
                       </p>
                     </Upload.Dragger>
-                    {siteData?.images?.find((img: any) => img.reftype === 'logo') && (
+                    {logoImage && (
                       <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <div>
                           <Typography.Text type="secondary">Current Logo:</Typography.Text>
@@ -137,7 +138,7 @@ export const SiteEdit = () => {
                           <Avatar 
                             shape="square" 
                             size={64} 
-                            src={siteData.images.find((img: any) => img.reftype === 'logo').src} 
+                            src={logoImage.src} 
                             style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
                           />
                         </div>
