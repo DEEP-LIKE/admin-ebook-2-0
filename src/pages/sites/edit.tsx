@@ -115,6 +115,11 @@ export const SiteEdit = () => {
                     label="Logo Distribuidor"
                     name={["images", "logo"]}
                     help="Upload the official company logo"
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}
@@ -298,6 +303,11 @@ export const SiteEdit = () => {
                   <Form.Item
                     label="OpenGraph Image"
                     name={["images", "opengraph"]}
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}
@@ -336,6 +346,11 @@ export const SiteEdit = () => {
                   <Form.Item
                     label="Cover Image"
                     name={["images", "portada"]}
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}

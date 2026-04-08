@@ -103,6 +103,11 @@ export const SiteCreate = () => {
                     label="Logo Distribuidor"
                     name={["images", "logo"]}
                     help="Upload the official company logo"
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}
@@ -270,6 +275,11 @@ export const SiteCreate = () => {
                   <Form.Item
                     label="OpenGraph Image"
                     name={["images", "opengraph"]}
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}
@@ -294,6 +304,11 @@ export const SiteCreate = () => {
                   <Form.Item
                     label="Cover Image"
                     name={["images", "portada"]}
+                    valuePropName="fileList"
+                    getValueFromEvent={(e: any) => {
+                      if (Array.isArray(e)) return e;
+                      return e?.fileList;
+                    }}
                   >
                     <Upload.Dragger
                       maxCount={1}
