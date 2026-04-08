@@ -100,6 +100,29 @@ export const SiteCreate = () => {
                   </Form.Item>
 
                   <Form.Item
+                    label="Logo Distribuidor"
+                    name={["images", "logo"]}
+                    help="Upload the official company logo"
+                  >
+                    <Upload.Dragger
+                      maxCount={1}
+                      beforeUpload={() => false}
+                      style={{
+                        borderRadius: 12,
+                        border: "2px dashed #d9d9d9",
+                        padding: '10px'
+                      }}
+                    >
+                      <p className="ant-upload-drag-icon">
+                        <InboxOutlined style={{ color: "#003478" }} />
+                      </p>
+                      <p className="ant-upload-text">
+                        Click or drag Logo
+                      </p>
+                    </Upload.Dragger>
+                  </Form.Item>
+
+                  <Form.Item
                     label="Active Status"
                     name="active"
                     valuePropName="checked"
@@ -244,28 +267,6 @@ export const SiteCreate = () => {
               label: "Media",
               children: (
                 <>
-                  <Form.Item
-                    label="Logo Distribuidor"
-                    name={["images", "logo"]}
-                    help="Upload the official company logo"
-                  >
-                    <Upload.Dragger
-                      maxCount={1}
-                      beforeUpload={() => false}
-                      style={{
-                        borderRadius: 12,
-                        border: "2px dashed #d9d9d9",
-                      }}
-                    >
-                      <p className="ant-upload-drag-icon">
-                        <InboxOutlined style={{ color: "#003478" }} />
-                      </p>
-                      <p className="ant-upload-text">
-                        Click or drag Logo
-                      </p>
-                    </Upload.Dragger>
-                  </Form.Item>
-
                   <Form.Item
                     label="OpenGraph Image"
                     name={["images", "opengraph"]}
