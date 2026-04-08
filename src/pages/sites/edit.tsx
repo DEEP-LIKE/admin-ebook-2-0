@@ -43,7 +43,9 @@ export const SiteEdit = () => {
   });
 
   const siteData = query.data?.data;
-  const logoImage = siteData?.images?.find((img: any) => img?.reftype === 'logo');
+  const logoImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'logo');
+  const portadaImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'portada');
+  const opengraphImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'opengraph');
 
   // Enhance options with image data for custom rendering
   const carOptions = carQueryResult.data?.data?.map((item: any) => ({
@@ -315,6 +317,20 @@ export const SiteEdit = () => {
                         Recommended: 1200x630px
                       </p>
                     </Upload.Dragger>
+                    {opengraphImage && (
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div>
+                          <Typography.Text type="secondary">Current OpenGraph:</Typography.Text>
+                          <br />
+                          <Avatar 
+                            shape="square" 
+                            size={64} 
+                            src={opengraphImage.src} 
+                            style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </Form.Item>
 
                   <Form.Item
@@ -339,6 +355,20 @@ export const SiteEdit = () => {
                         Recommended: 1920x1080px
                       </p>
                     </Upload.Dragger>
+                    {portadaImage && (
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div>
+                          <Typography.Text type="secondary">Current Cover:</Typography.Text>
+                          <br />
+                          <Avatar 
+                            shape="square" 
+                            size={64} 
+                            src={portadaImage.src} 
+                            style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </Form.Item>
                 </>
               ),
