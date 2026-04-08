@@ -36,17 +36,17 @@ export const SiteCreate = () => {
   });
 
   // Enhance options with image data for custom rendering
-  const carOptions = carQueryResult.data?.data.map((item: any) => ({
+  const carOptions = carQueryResult.data?.data?.map((item: any) => ({
     label: item.name,
     value: item.id,
     image: item.image?.src,
     desc: item.menu_position,
-  }));
+  })) || [];
 
-  const contactOptions = contactQueryResult.data?.data.map((item: any) => ({
+  const contactOptions = contactQueryResult.data?.data?.map((item: any) => ({
     label: item.email,
     value: item.id,
-  }));
+  })) || [];
 
   return (
     <Create saveButtonProps={saveButtonProps}>

@@ -46,17 +46,17 @@ export const SiteEdit = () => {
   const logoImage = siteData?.images?.find((img: any) => img?.reftype === 'logo');
 
   // Enhance options with image data for custom rendering
-  const carOptions = carQueryResult.data?.data.map((item: any) => ({
+  const carOptions = carQueryResult.data?.data?.map((item: any) => ({
     label: item.name,
     value: item.id,
     image: item.image?.src,
     desc: item.menu_position,
-  }));
+  })) || [];
 
-  const contactOptions = contactQueryResult.data?.data.map((item: any) => ({
+  const contactOptions = contactQueryResult.data?.data?.map((item: any) => ({
     label: item.email,
     value: item.id,
-  }));
+  })) || [];
 
   return (
     <Edit saveButtonProps={saveButtonProps}>
