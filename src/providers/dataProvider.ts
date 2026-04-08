@@ -9,6 +9,9 @@ interface CustomVariables {
     portada?: {
       rawFile?: File;
     };
+    logo?: {
+      rawFile?: File;
+    };
     rawFile?: File;
   };
   image_id?: string | number;
@@ -62,7 +65,8 @@ const hasImageUpload = (variables: any): boolean => {
     !!getRawFile(variables?.images) ||
     !!getRawFile(variables?.image) || // Support singular 'image'
     !!getRawFile(variables?.images?.opengraph) ||
-    !!getRawFile(variables?.images?.portada)
+    !!getRawFile(variables?.images?.portada) ||
+    !!getRawFile(variables?.images?.logo)
   );
 };
 
@@ -243,6 +247,13 @@ export const dataProvider: DataProvider = {
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
+      const logoFile = getRawFile(typedVars.images?.logo);
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        const uploaded = await uploadImage(formData);
+        finalVariables.image_id = uploaded.id;
+        finalVariables.reftype = "logo";
       }
 
       // Cleanup
@@ -378,6 +389,13 @@ export const dataProvider: DataProvider = {
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
+      const logoFile = getRawFile(typedVars.images?.logo);
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        const uploaded = await uploadImage(formData);
+        finalVariables.image_id = uploaded.id;
+        finalVariables.reftype = "logo";
       }
       
       delete finalVariables.images;

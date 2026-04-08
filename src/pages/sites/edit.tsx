@@ -256,6 +256,41 @@ export const SiteEdit = () => {
               children: (
                 <>
                   <Form.Item
+                    label="Logo Distribuidor"
+                    name={["images", "logo"]}
+                    help="Upload the official company logo"
+                  >
+                    <Upload.Dragger
+                      maxCount={1}
+                      beforeUpload={() => false}
+                      style={{
+                        borderRadius: 12,
+                        border: "2px dashed #d9d9d9",
+                        marginBottom: 16
+                      }}
+                    >
+                      <p className="ant-upload-drag-icon">
+                        <InboxOutlined style={{ color: "#003478" }} />
+                      </p>
+                      <p className="ant-upload-text">
+                        Click or drag Logo
+                      </p>
+                    </Upload.Dragger>
+                    {siteData?.images?.find((img: any) => img.reftype === 'logo') && (
+                      <div style={{ marginTop: 10 }}>
+                        <Typography.Text type="secondary">Current Logo:</Typography.Text>
+                        <br />
+                        <Avatar 
+                          shape="square" 
+                          size={100} 
+                          src={siteData.images.find((img: any) => img.reftype === 'logo').src} 
+                          style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
+                        />
+                      </div>
+                    )}
+                  </Form.Item>
+
+                  <Form.Item
                     label="OpenGraph Image"
                     name={["images", "opengraph"]}
                   >
