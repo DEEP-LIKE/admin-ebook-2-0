@@ -66,7 +66,10 @@ const hasImageUpload = (variables: any): boolean => {
     !!getRawFile(variables?.image) || // Support singular 'image'
     !!getRawFile(variables?.images?.opengraph) ||
     !!getRawFile(variables?.images?.portada) ||
-    !!getRawFile(variables?.images?.logo)
+    !!getRawFile(variables?.images?.logo) ||
+    !!getRawFile(variables?.logo_file) ||
+    !!getRawFile(variables?.portada_file) ||
+    !!getRawFile(variables?.opengraph_file)
   );
 };
 
@@ -340,7 +343,7 @@ export const dataProvider: DataProvider = {
       }
 
       // 2. Nested specific fields
-      const opengraphFile = getRawFile(typedVars.images?.opengraph);
+      const opengraphFile = getRawFile(typedVars.opengraph_file) || getRawFile(typedVars.images?.opengraph);
       if (opengraphFile) {
         const formData = new FormData();
         formData.append("file", opengraphFile);
@@ -348,7 +351,7 @@ export const dataProvider: DataProvider = {
         imageUpdates.push({ image_id: uploaded.id, reftype: "opengraph" });
       } 
       
-      const portadaFile = getRawFile(typedVars.images?.portada);
+      const portadaFile = getRawFile(typedVars.portada_file) || getRawFile(typedVars.images?.portada);
       if (portadaFile) {
         const formData = new FormData();
         formData.append("file", portadaFile);
@@ -356,7 +359,7 @@ export const dataProvider: DataProvider = {
         imageUpdates.push({ image_id: uploaded.id, reftype: "portada" });
       }
 
-      const logoFile = getRawFile(typedVars.images?.logo);
+      const logoFile = getRawFile(typedVars.logo_file) || getRawFile(typedVars.images?.logo);
       if (logoFile) {
         const formData = new FormData();
         formData.append("file", logoFile);
@@ -372,6 +375,9 @@ export const dataProvider: DataProvider = {
       }
       
       delete finalVariables.images;
+      delete finalVariables.logo_file;
+      delete finalVariables.portada_file;
+      delete finalVariables.opengraph_file;
     }
 
     const response = await fetch(`${API_URL}/${resource}/${id}`, {

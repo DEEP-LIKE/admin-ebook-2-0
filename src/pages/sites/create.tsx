@@ -101,7 +101,7 @@ export const SiteCreate = () => {
 
                   <Form.Item
                     label="Logo Distribuidor"
-                    name={["images", "logo"]}
+                    name="logo_file"
                     help="Upload the official company logo"
                     valuePropName="fileList"
                     getValueFromEvent={(e: any) => {
@@ -274,7 +274,7 @@ export const SiteCreate = () => {
                 <>
                   <Form.Item
                     label="OpenGraph Image"
-                    name={["images", "opengraph"]}
+                    name="opengraph_file"
                     valuePropName="fileList"
                     getValueFromEvent={(e: any) => {
                       if (Array.isArray(e)) return e;
@@ -303,7 +303,7 @@ export const SiteCreate = () => {
 
                   <Form.Item
                     label="Cover Image"
-                    name={["images", "portada"]}
+                    name="portada_file"
                     valuePropName="fileList"
                     getValueFromEvent={(e: any) => {
                       if (Array.isArray(e)) return e;
