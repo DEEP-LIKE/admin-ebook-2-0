@@ -5,12 +5,9 @@ import { useOne } from "@refinedev/core";
 import { useParams } from "react-router";
 
 export const SiteEdit = () => {
-  const { formProps, saveButtonProps } = useForm();
+  const { formProps, saveButtonProps, query } = useForm();
+  const siteData = query?.data?.data;
   const { id } = useParams();
-  const { query } = useOne({
-    resource: "sites",
-    id: id || "",
-  });
 
   const { selectProps: carSelectProps, query: carQueryResult } = useSelect({
     resource: "cars",
@@ -42,7 +39,6 @@ export const SiteEdit = () => {
     ],
   });
 
-  const siteData = query.data?.data;
   const logoImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'logo');
   const portadaImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'portada');
   const opengraphImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'opengraph');

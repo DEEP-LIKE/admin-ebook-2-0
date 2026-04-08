@@ -172,6 +172,8 @@ export const dataProvider: DataProvider = {
 
     // Manejo especial de imágenes
     if (hasImageUpload(typedVars)) {
+      const imageUpdates = [];
+
       // 1. Singular 'image' field (Cars, Promotions)
       const singularImage = getRawFile(typedVars.image);
       if (singularImage) {
@@ -182,62 +184,19 @@ export const dataProvider: DataProvider = {
             if (uploaded && uploaded.id) {
                 finalVariables.image_id = uploaded.id;
                 finalVariables.image = uploaded.id;
-            } else {
-                console.error("Upload failed or returned no ID", uploaded);
             }
         } catch (error) {
             console.error("Error uploading singular image", error);
         }
       }
-
-      // 2. 'images' field (Images resource, potentially multiple but handled as single for convenience if needed, 
-      // or specific structure for others)
-      // NOTE: The previous code handled 'images.rawFile' which is not standard. 
-      // We will check for generic 'images' upload.
-      const genericImages = getRawFile(typedVars.images);
       
-      if (genericImages) {
-          const formData = new FormData();
-          formData.append("file", genericImages);
-          const uploaded = await uploadImage(formData);
-          finalVariables.image_id = uploaded.id;
-          // If this was an 'Images' resource create, it might just need the ID or might be fine.
-          // However, 'Images' resource usually creates an image DIRECTLY. 
-          // If resource === 'images', we might be uploading twice if we don't watch out.
-          // But 'uploadImage' hits /images POST. 'create' hits /images POST.
-          // If resource is 'images', we should probably NOT call uploadImage helper separately blindly?
-          // Actually, if resource is 'images', the 'create' CALL IS the upload.
-          // But let's assume valid Refine pattern: Upload to storage -> Get ID -> Create record with ID.
-          // If the API for 'POST /images' just takes a file and returns the image object, then for 'images' resource 
-          // we should Construct the FormData here and send it as the body of the Main Request, OR rely on the helper 
-          // and let the main request just attach metadata if needed.
-          
-          // Current observation: 'Images' resource create just sends a file.
-      }
-      
-      if (resource === 'images' && typedVars.images) {
-          // Special handling for Images resource creation to avoid double upload or wrong payload
-          // If we already uploaded above (genericImages), we have an ID.
-          // If the API expects Multipart for POST /images, we should handle it here.
-          // But previous code used JSON body for everything.
-          // Let's assume standard flow: Upload file -> get ID -> Create record?
-          // OR: POST /images IS the creation.
-          
-          // Let's look at previous implementation:
-          // It uploaded, got ID, then POST /images with { image_id: ... }. 
-          // This implies POST /images can take JSON to "register" or "update" metadata? 
-          // Or maybe we are creating a duplicate entry?
-          // Let's stick to the pattern: Upload -> assign image_id -> continue.
-      }
-      
-      // 3. Nested specific fields (opengraph, portada)
+      // 2. Nested specific fields (opengraph, portada, logo)
       const opengraphFile = getRawFile(typedVars.images?.opengraph);
       if (opengraphFile) {
         const formData = new FormData();
         formData.append("file", opengraphFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "opengraph";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "opengraph" });
       }
 
       const portadaFile = getRawFile(typedVars.images?.portada);
@@ -245,8 +204,7 @@ export const dataProvider: DataProvider = {
         const formData = new FormData();
         formData.append("file", portadaFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "portada";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "portada" });
       }
 
       const logoFile = getRawFile(typedVars.images?.logo);
@@ -254,8 +212,14 @@ export const dataProvider: DataProvider = {
         const formData = new FormData();
         formData.append("file", logoFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "logo";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "logo" });
+      }
+
+      if (imageUpdates.length > 0) {
+        finalVariables.image_updates = imageUpdates;
+        // Backwards compatibility
+        finalVariables.image_id = imageUpdates[imageUpdates.length - 1].image_id;
+        finalVariables.reftype = imageUpdates[imageUpdates.length - 1].reftype;
       }
 
       // Cleanup
@@ -359,6 +323,7 @@ export const dataProvider: DataProvider = {
     }
 
     if (hasImageUpload(typedVars) && resource !== 'images') {
+      const imageUpdates = [];
       
       // 1. Singular 'image'
       const singularImage = getRawFile(typedVars.image);
@@ -380,8 +345,7 @@ export const dataProvider: DataProvider = {
         const formData = new FormData();
         formData.append("file", opengraphFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "opengraph";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "opengraph" });
       } 
       
       const portadaFile = getRawFile(typedVars.images?.portada);
@@ -389,8 +353,7 @@ export const dataProvider: DataProvider = {
         const formData = new FormData();
         formData.append("file", portadaFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "portada";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "portada" });
       }
 
       const logoFile = getRawFile(typedVars.images?.logo);
@@ -398,8 +361,14 @@ export const dataProvider: DataProvider = {
         const formData = new FormData();
         formData.append("file", logoFile);
         const uploaded = await uploadImage(formData);
-        finalVariables.image_id = uploaded.id;
-        finalVariables.reftype = "logo";
+        imageUpdates.push({ image_id: uploaded.id, reftype: "logo" });
+      }
+
+      if (imageUpdates.length > 0) {
+        finalVariables.image_updates = imageUpdates;
+        // Backwards compatibility
+        finalVariables.image_id = imageUpdates[imageUpdates.length - 1].image_id;
+        finalVariables.reftype = imageUpdates[imageUpdates.length - 1].reftype;
       }
       
       delete finalVariables.images;
