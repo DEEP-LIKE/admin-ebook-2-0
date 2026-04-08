@@ -247,6 +247,8 @@ export const dataProvider: DataProvider = {
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
+      }
+
       const logoFile = getRawFile(typedVars.images?.logo);
       if (logoFile) {
         const formData = new FormData();
@@ -389,6 +391,8 @@ export const dataProvider: DataProvider = {
         const uploaded = await uploadImage(formData);
         finalVariables.image_id = uploaded.id;
         finalVariables.reftype = "portada";
+      }
+
       const logoFile = getRawFile(typedVars.images?.logo);
       if (logoFile) {
         const formData = new FormData();
