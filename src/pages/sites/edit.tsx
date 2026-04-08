@@ -1,68 +1,89 @@
 import { Edit, useForm, useSelect } from "@refinedev/antd";
-import { Form, Input, Switch, Tabs, Select, Upload, Avatar, Space, Typography } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
-import { useOne } from "@refinedev/core";
+import { Form, Input, Switch, Tabs, Select, Upload, Avatar, Space, Typography, Button, Popconfirm, message } from "antd";
+import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useParams } from "react-router";
+import { useState } from "react";
+
+const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
 export const SiteEdit = () => {
   const { formProps, saveButtonProps, query } = useForm();
   const siteData = query?.data?.data;
   const { id } = useParams();
 
+  // Track deleted images locally so UI updates immediately
+  const [deletedReftypes, setDeletedReftypes] = useState<string[]>([]);
+
   const { selectProps: carSelectProps, query: carQueryResult } = useSelect({
     resource: "cars",
     optionLabel: "name",
     optionValue: "id",
-    pagination: {
-      pageSize: 1000,
-    },
-    sorters: [
-      {
-        field: "menu_position",
-        order: "asc",
-      },
-    ],
+    pagination: { pageSize: 1000 },
+    sorters: [{ field: "menu_position", order: "asc" }],
   });
 
   const { selectProps: contactSelectProps, query: contactQueryResult } = useSelect({
     resource: "contact_mails",
     optionLabel: "email",
     optionValue: "id",
-    pagination: {
-      pageSize: 1000,
-    },
-    sorters: [
-      {
-        field: "email",
-        order: "asc",
-      },
-    ],
+    pagination: { pageSize: 1000 },
+    sorters: [{ field: "email", order: "asc" }],
   });
 
-  const logoImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'logo');
-  const portadaImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'portada');
-  const opengraphImage = siteData?.images?.find((img: any) => img?.reftype && img.reftype.toLowerCase() === 'opengraph');
+  const logoImage = !deletedReftypes.includes("logo")
+    ? siteData?.images?.find((img: any) => img?.reftype?.toLowerCase() === "logo")
+    : null;
+  const portadaImage = !deletedReftypes.includes("portada")
+    ? siteData?.images?.find((img: any) => img?.reftype?.toLowerCase() === "portada")
+    : null;
+  const opengraphImage = !deletedReftypes.includes("opengraph")
+    ? siteData?.images?.find((img: any) => img?.reftype?.toLowerCase() === "opengraph")
+    : null;
 
-  // Enhance options with image data for custom rendering
-  const carOptions = carQueryResult.data?.data?.map((item: any) => ({
-    label: item.name,
-    value: item.id,
-    image: item.image?.src,
-    desc: item.menu_position,
-  })) || [];
+  const handleDeleteImage = async (imageId: number, reftype: string) => {
+    try {
+      const response = await fetch(`${API_URL}/images/${imageId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setDeletedReftypes((prev) => [...prev, reftype]);
+        message.success(`${reftype} image deleted successfully`);
+      } else {
+        message.error("Failed to delete image");
+      }
+    } catch (error) {
+      message.error("Error deleting image");
+      console.error("Delete image error:", error);
+    }
+  };
 
-  const contactOptions = contactQueryResult.data?.data?.map((item: any) => ({
-    label: item.email,
-    value: item.id,
-  })) || [];
+  const carOptions =
+    carQueryResult.data?.data?.map((item: any) => ({
+      label: item.name,
+      value: item.id,
+      image: item.image?.src,
+      desc: item.menu_position,
+    })) || [];
+
+  const contactOptions =
+    contactQueryResult.data?.data?.map((item: any) => ({
+      label: item.email,
+      value: item.id,
+    })) || [];
+
+  // Normalize fileList so originFileObj is always present
+  const normFileList = (e: any) => {
+    const list = Array.isArray(e) ? e : e?.fileList ?? [];
+    return list.map((f: any) => ({
+      ...f,
+      // Ant Design sets originFileObj when beforeUpload returns false
+      originFileObj: f.originFileObj ?? f,
+    }));
+  };
 
   return (
     <Edit saveButtonProps={saveButtonProps}>
-      <Form
-        {...formProps}
-        layout="vertical"
-        style={{ maxWidth: 800 }}
-      >
+      <Form {...formProps} layout="vertical" style={{ maxWidth: 800 }}>
         <Tabs
           defaultActiveKey="general"
           items={[
@@ -74,37 +95,17 @@ export const SiteEdit = () => {
                   <Form.Item
                     label="Folder Name"
                     name="folderName"
-                    rules={[
-                      { required: true, message: "Please enter folder name" },
-                    ]}
+                    rules={[{ required: true, message: "Please enter folder name" }]}
                   >
-                    <Input
-                      size="large"
-                      placeholder="e.g., fordcavsamotors"
-                      style={{ borderRadius: 8 }}
-                    />
+                    <Input size="large" placeholder="e.g., fordcavsamotors" style={{ borderRadius: 8 }} />
                   </Form.Item>
 
-                  <Form.Item
-                    label="Title"
-                    name="title"
-                  >
-                    <Input
-                      size="large"
-                      placeholder="Site title"
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="Title" name="title">
+                    <Input size="large" placeholder="Site title" style={{ borderRadius: 8 }} />
                   </Form.Item>
 
-                  <Form.Item
-                    label="Head Title"
-                    name="headTitle"
-                  >
-                    <Input
-                      size="large"
-                      placeholder="SEO title"
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="Head Title" name="headTitle">
+                    <Input size="large" placeholder="SEO title" style={{ borderRadius: 8 }} />
                   </Form.Item>
 
                   <Form.Item
@@ -112,54 +113,71 @@ export const SiteEdit = () => {
                     name="logo_file"
                     help="Upload the official company logo"
                     valuePropName="fileList"
-                    getValueFromEvent={(e: any) => {
-                      if (Array.isArray(e)) return e;
-                      return e?.fileList;
-                    }}
+                    getValueFromEvent={normFileList}
                   >
                     <Upload.Dragger
                       maxCount={1}
+                      // Return false to prevent auto-upload but keep originFileObj intact
                       beforeUpload={() => false}
                       style={{
                         borderRadius: 12,
                         border: "2px dashed #d9d9d9",
-                        padding: '10px'
+                        padding: "10px",
                       }}
                     >
                       <p className="ant-upload-drag-icon">
                         <InboxOutlined style={{ color: "#003478" }} />
                       </p>
-                      <p className="ant-upload-text">
-                        Click or drag Logo
-                      </p>
+                      <p className="ant-upload-text">Click or drag Logo</p>
                     </Upload.Dragger>
+
                     {logoImage && (
-                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 15,
+                        }}
+                      >
                         <div>
                           <Typography.Text type="secondary">Current Logo:</Typography.Text>
                           <br />
-                          <Avatar 
-                            shape="square" 
-                            size={64} 
-                            src={logoImage.src} 
-                            style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
-                          />
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                            <Avatar
+                              shape="square"
+                              size={64}
+                              src={logoImage.src}
+                              style={{ border: "1px solid #d9d9d9" }}
+                            />
+                            <Popconfirm
+                              title="Delete logo?"
+                              description="This will permanently remove the current logo."
+                              onConfirm={() => handleDeleteImage(logoImage.id, "logo")}
+                              okText="Delete"
+                              cancelText="Cancel"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                style={{ borderRadius: 6 }}
+                              >
+                                Remove
+                              </Button>
+                            </Popconfirm>
+                          </div>
                         </div>
                       </div>
                     )}
                   </Form.Item>
 
-                  <Form.Item
-                    label="Active Status"
-                    name="active"
-                    valuePropName="checked"
-                  >
+                  <Form.Item label="Active Status" name="active" valuePropName="checked">
                     <Switch
                       checkedChildren="Live"
                       unCheckedChildren="Draft"
-                      style={{
-                        background: siteData?.active ? "#10B981" : "#d9d9d9",
-                      }}
+                      style={{ background: siteData?.active ? "#10B981" : "#d9d9d9" }}
                     />
                   </Form.Item>
                 </>
@@ -169,11 +187,7 @@ export const SiteEdit = () => {
               key: "cars",
               label: "Cars",
               children: (
-                <Form.Item
-                  label="Select Cars"
-                  name="cars_ids"
-                  help="Select the cars available for this site"
-                >
+                <Form.Item label="Select Cars" name="cars_ids" help="Select the cars available for this site">
                   <Select
                     {...carSelectProps}
                     mode="multiple"
@@ -186,12 +200,7 @@ export const SiteEdit = () => {
                     }
                     optionRender={(option) => (
                       <Space>
-                        <Avatar 
-                          shape="square" 
-                          src={option.data.image} 
-                          alt={option.data.label}
-                          size="large"
-                        />
+                        <Avatar shape="square" src={option.data.image} alt={option.data.label} size="large" />
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <Typography.Text strong>{option.data.label}</Typography.Text>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -227,37 +236,14 @@ export const SiteEdit = () => {
               label: "Content",
               children: (
                 <>
-                  <Form.Item
-                    label="URL"
-                    name="url"
-                  >
-                    <Input
-                      size="large"
-                      placeholder="https://..."
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="URL" name="url">
+                    <Input size="large" placeholder="https://..." style={{ borderRadius: 8 }} />
                   </Form.Item>
-
-                  <Form.Item
-                    label="Terms & Conditions"
-                    name="terms"
-                  >
-                    <Input.TextArea
-                      rows={4}
-                      placeholder="Enter terms and conditions"
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="Terms & Conditions" name="terms">
+                    <Input.TextArea rows={4} placeholder="Enter terms and conditions" style={{ borderRadius: 8 }} />
                   </Form.Item>
-
-                  <Form.Item
-                    label="Map Embed"
-                    name="map"
-                  >
-                    <Input.TextArea
-                      rows={3}
-                      placeholder="Google Maps embed code"
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="Map Embed" name="map">
+                    <Input.TextArea rows={3} placeholder="Google Maps embed code" style={{ borderRadius: 8 }} />
                   </Form.Item>
                 </>
               ),
@@ -267,26 +253,11 @@ export const SiteEdit = () => {
               label: "Social Media",
               children: (
                 <>
-                  <Form.Item
-                    label="Facebook URL"
-                    name="facebook"
-                  >
-                    <Input
-                      size="large"
-                      placeholder="https://facebook.com/..."
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="Facebook URL" name="facebook">
+                    <Input size="large" placeholder="https://facebook.com/..." style={{ borderRadius: 8 }} />
                   </Form.Item>
-
-                  <Form.Item
-                    label="WhatsApp Number"
-                    name="whatsapp"
-                  >
-                    <Input
-                      size="large"
-                      placeholder="+52..."
-                      style={{ borderRadius: 8 }}
-                    />
+                  <Form.Item label="WhatsApp Number" name="whatsapp">
+                    <Input size="large" placeholder="+52..." style={{ borderRadius: 8 }} />
                   </Form.Item>
                 </>
               ),
@@ -300,40 +271,40 @@ export const SiteEdit = () => {
                     label="OpenGraph Image"
                     name="opengraph_file"
                     valuePropName="fileList"
-                    getValueFromEvent={(e: any) => {
-                      if (Array.isArray(e)) return e;
-                      return e?.fileList;
-                    }}
+                    getValueFromEvent={normFileList}
                   >
                     <Upload.Dragger
                       maxCount={1}
                       beforeUpload={() => false}
-                      style={{
-                        borderRadius: 12,
-                        border: "2px dashed #d9d9d9",
-                      }}
+                      style={{ borderRadius: 12, border: "2px dashed #d9d9d9" }}
                     >
                       <p className="ant-upload-drag-icon">
                         <InboxOutlined style={{ color: "#003478" }} />
                       </p>
-                      <p className="ant-upload-text">
-                        Click or drag OpenGraph image
-                      </p>
-                      <p className="ant-upload-hint">
-                        Recommended: 1200x630px
-                      </p>
+                      <p className="ant-upload-text">Click or drag OpenGraph image</p>
+                      <p className="ant-upload-hint">Recommended: 1200x630px</p>
                     </Upload.Dragger>
                     {opengraphImage && (
-                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div>
-                          <Typography.Text type="secondary">Current OpenGraph:</Typography.Text>
-                          <br />
-                          <Avatar 
-                            shape="square" 
-                            size={64} 
-                            src={opengraphImage.src} 
-                            style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
+                      <div style={{ marginTop: 10 }}>
+                        <Typography.Text type="secondary">Current OpenGraph:</Typography.Text>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                          <Avatar
+                            shape="square"
+                            size={64}
+                            src={opengraphImage.src}
+                            style={{ border: "1px solid #d9d9d9" }}
                           />
+                          <Popconfirm
+                            title="Delete OpenGraph image?"
+                            onConfirm={() => handleDeleteImage(opengraphImage.id, "opengraph")}
+                            okText="Delete"
+                            cancelText="Cancel"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 6 }}>
+                              Remove
+                            </Button>
+                          </Popconfirm>
                         </div>
                       </div>
                     )}
@@ -343,40 +314,40 @@ export const SiteEdit = () => {
                     label="Cover Image"
                     name="portada_file"
                     valuePropName="fileList"
-                    getValueFromEvent={(e: any) => {
-                      if (Array.isArray(e)) return e;
-                      return e?.fileList;
-                    }}
+                    getValueFromEvent={normFileList}
                   >
                     <Upload.Dragger
                       maxCount={1}
                       beforeUpload={() => false}
-                      style={{
-                        borderRadius: 12,
-                        border: "2px dashed #d9d9d9",
-                      }}
+                      style={{ borderRadius: 12, border: "2px dashed #d9d9d9" }}
                     >
                       <p className="ant-upload-drag-icon">
                         <InboxOutlined style={{ color: "#003478" }} />
                       </p>
-                      <p className="ant-upload-text">
-                        Click or drag cover image
-                      </p>
-                      <p className="ant-upload-hint">
-                        Recommended: 1920x1080px
-                      </p>
+                      <p className="ant-upload-text">Click or drag cover image</p>
+                      <p className="ant-upload-hint">Recommended: 1920x1080px</p>
                     </Upload.Dragger>
                     {portadaImage && (
-                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div>
-                          <Typography.Text type="secondary">Current Cover:</Typography.Text>
-                          <br />
-                          <Avatar 
-                            shape="square" 
-                            size={64} 
-                            src={portadaImage.src} 
-                            style={{ border: "1px solid #d9d9d9", marginTop: 5 }}
+                      <div style={{ marginTop: 10 }}>
+                        <Typography.Text type="secondary">Current Cover:</Typography.Text>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                          <Avatar
+                            shape="square"
+                            size={64}
+                            src={portadaImage.src}
+                            style={{ border: "1px solid #d9d9d9" }}
                           />
+                          <Popconfirm
+                            title="Delete cover image?"
+                            onConfirm={() => handleDeleteImage(portadaImage.id, "portada")}
+                            okText="Delete"
+                            cancelText="Cancel"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 6 }}>
+                              Remove
+                            </Button>
+                          </Popconfirm>
                         </div>
                       </div>
                     )}
