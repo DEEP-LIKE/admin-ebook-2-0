@@ -45,6 +45,7 @@ export const ImageEdit = () => {
             // If only meta changed, use standard Refine PATCH (JSON)
             await formProps.onFinish?.(values);
         }
+        formProps.form?.resetFields();
         list("images");
     } catch (err: any) {
         message.error(err.message || "Error updating image");

@@ -48,6 +48,7 @@ export const ImageCreate = () => {
       );
 
       message.success(`${fileList.length} images uploaded successfully`);
+      formProps.form?.resetFields();
       list("images");
     } catch (err: any) {
       message.error(err.message || "Error uploading images");
