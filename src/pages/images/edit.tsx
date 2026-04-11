@@ -8,7 +8,9 @@ import { useNavigation } from "@refinedev/core";
 const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
 export const ImageEdit = () => {
-  const { formProps, saveButtonProps, query } = useForm();
+  const { formProps, saveButtonProps, query } = useForm({
+    warnWhenUnsavedChanges: false,
+  });
   const [uploading, setUploading] = useState(false);
   const { list } = useNavigation();
   
@@ -16,8 +18,8 @@ export const ImageEdit = () => {
 
   const replaceFile = async (id: number | string, file: File, reftype?: string) => {
     const formData = new FormData();
-    formData.append("file", file);
     if (reftype) formData.append("reftype", reftype);
+    formData.append("file", file);
 
     const res = await fetch(`${API_URL}/images/${id}`, {
       method: "PATCH",

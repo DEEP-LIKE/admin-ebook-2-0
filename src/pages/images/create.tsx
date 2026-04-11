@@ -8,14 +8,16 @@ import { useNavigation } from "@refinedev/core";
 const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
 export const ImageCreate = () => {
-  const { formProps, saveButtonProps } = useForm();
+  const { formProps, saveButtonProps } = useForm({
+    warnWhenUnsavedChanges: false,
+  });
   const [uploading, setUploading] = useState(false);
   const { list } = useNavigation();
 
   const uploadFile = async (file: File, reftype?: string) => {
     const formData = new FormData();
-    formData.append("file", file);
     if (reftype) formData.append("reftype", reftype);
+    formData.append("file", file);
 
     const res = await fetch(`${API_URL}/images`, {
       method: "POST",
