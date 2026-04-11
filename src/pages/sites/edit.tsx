@@ -1,5 +1,18 @@
 import { Edit, useForm, useSelect } from "@refinedev/antd";
-import { Form, Input, Switch, Tabs, Select, Upload, Avatar, Space, Typography, Button, Popconfirm, message } from "antd";
+import {
+  Form,
+  Input,
+  Switch,
+  Tabs,
+  Select,
+  Upload,
+  Avatar,
+  Space,
+  Typography,
+  Button,
+  Popconfirm,
+  message,
+} from "antd";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useParams } from "react-router";
 import { useState, useEffect } from "react";
@@ -7,13 +20,35 @@ import { Tag } from "antd";
 
 const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
+// ─── Helper: sube un archivo y devuelve el image_id ───────────────────────────
+async function uploadFile(file: File, siteId: string | number): Promise<number> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("site_id", String(siteId));
+
+  const res = await fetch(`${API_URL}/images`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload failed (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  // La API devuelve { id: number, ... } o { image: { id: number } }
+  return data.id ?? data.image?.id;
+}
+
 export const SiteEdit = () => {
   const { formProps, saveButtonProps, query } = useForm();
   const siteData = query?.data?.data;
   const { id } = useParams();
 
-  // Track deleted images locally so UI updates immediately
   const [deletedReftypes, setDeletedReftypes] = useState<string[]>([]);
+  // Guardar si el usuario eligió subir imágenes (para mostrar spinner)
+  const [uploading, setUploading] = useState(false);
 
   const { selectProps: carSelectProps, query: carQueryResult } = useSelect({
     resource: "cars",
@@ -50,10 +85,8 @@ export const SiteEdit = () => {
 
   const handleDeleteImage = async (imageId: number, reftype: string) => {
     try {
-      const response = await fetch(`${API_URL}/images/${imageId}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
+      const res = await fetch(`${API_URL}/images/${imageId}`, { method: "DELETE" });
+      if (res.ok) {
         setDeletedReftypes((prev) => [...prev, reftype]);
         message.success(`${reftype} image deleted successfully`);
       } else {
@@ -69,66 +102,112 @@ export const SiteEdit = () => {
     ...(carQueryResult.data?.data?.map((item: any) => ({
       label: item.name,
       value: `car_${item.id}`,
-      image: item.image?.src,
+      image: item.images?.[0]?.src ?? item.image?.src,
       desc: `Position: ${item.menu_position}`,
-      type: 'Car'
+      type: "Car",
     })) || []),
     ...(promoQueryResult.data?.data?.map((item: any) => ({
       label: item.name,
       value: `promo_${item.id}`,
       image: item.image?.src,
-      desc: item.description || 'Promotion',
-      type: 'Promotion'
-    })) || [])
+      desc: item.description || "Promotion",
+      type: "Promotion",
+    })) || []),
   ];
 
-  const contactOptions =
-    contactQueryResult.data?.data?.map((item: any) => ({
-      label: item.email,
-      value: item.id,
-    })) || [];
-
-  // Normalize fileList so originFileObj is always present
   const normFileList = (e: any) => {
     const list = Array.isArray(e) ? e : e?.fileList ?? [];
     return list.map((f: any) => ({
       ...f,
-      // Ant Design sets originFileObj when beforeUpload returns false
       originFileObj: f.originFileObj ?? f,
     }));
   };
 
   useEffect(() => {
     if (siteData) {
-      const cars = siteData.cars_ids?.map((id: number) => `car_${id}`) || [];
-      const promos = siteData.promotions_ids?.map((id: number) => `promo_${id}`) || [];
-      formProps.form?.setFieldsValue({
-        vehicles: [...cars, ...promos],
-      });
+      const cars = siteData.cars_ids?.map((cid: number) => `car_${cid}`) || [];
+      const promos = siteData.promotions_ids?.map((pid: number) => `promo_${pid}`) || [];
+      formProps.form?.setFieldsValue({ vehicles: [...cars, ...promos] });
     }
-  }, [siteData, formProps.form]);
+  }, [siteData]);
 
-  const customOnFinish = (values: any) => {
-    const vehicles = values.vehicles || [];
+  // ─── onFinish: sube imágenes primero, luego PATCH ─────────────────────────
+  const customOnFinish = async (values: any) => {
+    if (!id) return;
+
+    // 1. Separar vehicles → cars_ids + promotions_ids
+    const vehicles: string[] = values.vehicles || [];
     values.cars_ids = vehicles
-      .filter((v: string) => v.startsWith("car_"))
-      .map((v: string) => parseInt(v.split("_")[1]));
-      
+      .filter((v) => v.startsWith("car_"))
+      .map((v) => parseInt(v.split("_")[1]));
     values.promotions_ids = vehicles
-      .filter((v: string) => v.startsWith("promo_"))
-      .map((v: string) => parseInt(v.split("_")[1]));
-      
+      .filter((v) => v.startsWith("promo_"))
+      .map((v) => parseInt(v.split("_")[1]));
     delete values.vehicles;
-    
+
+    // 2. Recoger archivos a subir (logo, opengraph, portada)
+    const fileFields: { fieldName: string; reftype: string }[] = [
+      { fieldName: "logo_file", reftype: "logo" },
+      { fieldName: "opengraph_file", reftype: "opengraph" },
+      { fieldName: "portada_file", reftype: "portada" },
+    ];
+
+    const filesToUpload = fileFields
+      .map(({ fieldName, reftype }) => {
+        const fileList: any[] = values[fieldName] || [];
+        // Solo archivos nuevos (originFileObj presente = archivo local, no existente)
+        const file = fileList[0]?.originFileObj;
+        return file ? { file, reftype } : null;
+      })
+      .filter(Boolean) as { file: File; reftype: string }[];
+
+    // Limpiar campos de archivo del payload antes de enviar
+    fileFields.forEach(({ fieldName }) => delete values[fieldName]);
+
+    // 3. Subir archivos y construir image_updates
+    if (filesToUpload.length > 0) {
+      setUploading(true);
+      try {
+        const uploadResults = await Promise.all(
+          filesToUpload.map(async ({ file, reftype }) => {
+            console.log(`[edit] Uploading ${reftype}:`, file.name);
+            const imageId = await uploadFile(file, id);
+            console.log(`[edit] Uploaded ${reftype} → image_id=${imageId}`);
+            return { image_id: imageId, reftype };
+          })
+        );
+        values.image_updates = uploadResults;
+        console.log("[edit] image_updates:", uploadResults);
+      } catch (err: any) {
+        message.error(`Error uploading image: ${err.message}`);
+        console.error("[edit] Upload error:", err);
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    console.log("[edit] Final PATCH payload:", values);
+
+    // 4. Delegar a Refine para que haga el PATCH
     return formProps.onFinish?.(values);
   };
 
+  const isSaving = uploading || (saveButtonProps as any)?.loading;
+
   return (
-    <Edit saveButtonProps={saveButtonProps}>
+    <Edit
+      saveButtonProps={{
+        ...saveButtonProps,
+        loading: isSaving,
+        disabled: isSaving,
+      }}
+    >
       <Form {...formProps} onFinish={customOnFinish} layout="vertical" style={{ maxWidth: 800 }}>
         <Tabs
           defaultActiveKey="general"
           items={[
+            // ── General Info ────────────────────────────────────────────────
             {
               key: "general",
               label: "General Info",
@@ -159,13 +238,8 @@ export const SiteEdit = () => {
                   >
                     <Upload.Dragger
                       maxCount={1}
-                      // Return false to prevent auto-upload but keep originFileObj intact
                       beforeUpload={() => false}
-                      style={{
-                        borderRadius: 12,
-                        border: "2px dashed #d9d9d9",
-                        padding: "10px",
-                      }}
+                      style={{ borderRadius: 12, border: "2px dashed #d9d9d9", padding: "10px" }}
                     >
                       <p className="ant-upload-drag-icon">
                         <InboxOutlined style={{ color: "#003478" }} />
@@ -174,14 +248,7 @@ export const SiteEdit = () => {
                     </Upload.Dragger>
 
                     {logoImage && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 15,
-                        }}
-                      >
+                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 15 }}>
                         <div>
                           <Typography.Text type="secondary">Current Logo:</Typography.Text>
                           <br />
@@ -200,12 +267,7 @@ export const SiteEdit = () => {
                               cancelText="Cancel"
                               okButtonProps={{ danger: true }}
                             >
-                              <Button
-                                danger
-                                size="small"
-                                icon={<DeleteOutlined />}
-                                style={{ borderRadius: 6 }}
-                              >
+                              <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 6 }}>
                                 Remove
                               </Button>
                             </Popconfirm>
@@ -225,11 +287,17 @@ export const SiteEdit = () => {
                 </>
               ),
             },
+
+            // ── Vehicles & Promotions ────────────────────────────────────────
             {
               key: "cars",
               label: "Vehicles & Promotions",
               children: (
-                <Form.Item label="Select Cars & Promotions" name="vehicles" help="Select the cars and promotions available for this site">
+                <Form.Item
+                  label="Select Cars & Promotions"
+                  name="vehicles"
+                  help="Select the cars and promotions available for this site"
+                >
                   <Select
                     mode="multiple"
                     placeholder="Select cars and promotions..."
@@ -241,11 +309,16 @@ export const SiteEdit = () => {
                     }
                     optionRender={(option) => (
                       <Space>
-                        <Avatar shape="square" src={option.data.image} alt={option.data.label} size="large" />
+                        <Avatar
+                          shape="square"
+                          src={option.data.image}
+                          alt={option.data.label}
+                          size="large"
+                        />
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <Space>
                             <Typography.Text strong>{option.data.label}</Typography.Text>
-                            <Tag color={option.data.type === 'Promotion' ? 'gold' : 'blue'}>
+                            <Tag color={option.data.type === "Promotion" ? "gold" : "blue"}>
                               {option.data.type}
                             </Tag>
                           </Space>
@@ -259,6 +332,8 @@ export const SiteEdit = () => {
                 </Form.Item>
               ),
             },
+
+            // ── Contacts ─────────────────────────────────────────────────────
             {
               key: "contacts",
               label: "Contacts",
@@ -277,6 +352,8 @@ export const SiteEdit = () => {
                 </Form.Item>
               ),
             },
+
+            // ── Content ───────────────────────────────────────────────────────
             {
               key: "content",
               label: "Content",
@@ -285,15 +362,29 @@ export const SiteEdit = () => {
                   <Form.Item label="URL" name="url">
                     <Input size="large" placeholder="https://..." style={{ borderRadius: 8 }} />
                   </Form.Item>
+                  <Form.Item label="Message – Sent" name="msg_enviado">
+                    <Input size="large" placeholder="Tu mensaje fue enviado correctamente." style={{ borderRadius: 8 }} />
+                  </Form.Item>
+                  <Form.Item label="Message – Failed" name="msg_fallido">
+                    <Input size="large" placeholder="Ocurrió un error al enviar tu mensaje." style={{ borderRadius: 8 }} />
+                  </Form.Item>
                   <Form.Item label="Terms & Conditions" name="terms">
                     <Input.TextArea rows={4} placeholder="Enter terms and conditions" style={{ borderRadius: 8 }} />
                   </Form.Item>
                   <Form.Item label="Map Embed" name="map">
                     <Input.TextArea rows={3} placeholder="Google Maps embed code" style={{ borderRadius: 8 }} />
                   </Form.Item>
+                  <Form.Item label="Map URL" name="mapurl">
+                    <Input size="large" placeholder="https://maps.google.com/..." style={{ borderRadius: 8 }} />
+                  </Form.Item>
+                  <Form.Item label="Waze URL" name="waze">
+                    <Input size="large" placeholder="https://waze.com/..." style={{ borderRadius: 8 }} />
+                  </Form.Item>
                 </>
               ),
             },
+
+            // ── Social Media ─────────────────────────────────────────────────
             {
               key: "social",
               label: "Social Media",
@@ -308,11 +399,14 @@ export const SiteEdit = () => {
                 </>
               ),
             },
+
+            // ── Media ─────────────────────────────────────────────────────────
             {
               key: "media",
               label: "Media",
               children: (
                 <>
+                  {/* OpenGraph */}
                   <Form.Item
                     label="OpenGraph Image"
                     name="opengraph_file"
@@ -330,6 +424,7 @@ export const SiteEdit = () => {
                       <p className="ant-upload-text">Click or drag OpenGraph image</p>
                       <p className="ant-upload-hint">Recommended: 1200x630px</p>
                     </Upload.Dragger>
+
                     {opengraphImage && (
                       <div style={{ marginTop: 10 }}>
                         <Typography.Text type="secondary">Current OpenGraph:</Typography.Text>
@@ -356,6 +451,7 @@ export const SiteEdit = () => {
                     )}
                   </Form.Item>
 
+                  {/* Portada */}
                   <Form.Item
                     label="Cover Image"
                     name="portada_file"
@@ -373,6 +469,7 @@ export const SiteEdit = () => {
                       <p className="ant-upload-text">Click or drag cover image</p>
                       <p className="ant-upload-hint">Recommended: 1920x1080px</p>
                     </Upload.Dragger>
+
                     {portadaImage && (
                       <div style={{ marginTop: 10 }}>
                         <Typography.Text type="secondary">Current Cover:</Typography.Text>
