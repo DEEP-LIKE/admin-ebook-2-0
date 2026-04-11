@@ -38,24 +38,25 @@ export const PromotionEdit = () => {
   };
 
   const customOnFinish = async (values: any) => {
-    const file = fileList[0]?.originFileObj;
+    // Buscar archivo nuevo en la lista
+    const file = fileList.find(f => f.originFileObj)?.originFileObj;
 
     if (file) {
       setUploading(true);
       try {
         const imageId = await uploadFile(file);
         values.image_id = imageId;
-        delete values.image;
       } catch (err) {
         message.error("Error uploading image");
         setUploading(false);
         return;
       }
       setUploading(false);
-    } else {
-      // Si no hay archivo nuevo, limpiar el campo 'image' para que no se mande basura al backend
-      delete values.image;
     }
+    
+    // Limpiar campos antes de enviar
+    delete values.image;
+    delete values.image_file;
 
     return formProps.onFinish?.(values);
   };
@@ -91,7 +92,7 @@ export const PromotionEdit = () => {
                 <div style={{ marginBottom: 8, fontWeight: 500 }}>Current Image:</div>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                     <Image
-                      src={promotionData.image.src}
+                      src={promotionData.image?.src}
                       width={200}
                       style={{ borderRadius: 8 }}
                     />
@@ -101,7 +102,7 @@ export const PromotionEdit = () => {
         </Form.Item>
 
         <Form.Item 
-          name="image"
+          name="image_file"
           valuePropName="fileList"
           getValueFromEvent={(e: any) => {
             const list = Array.isArray(e) ? e : e?.fileList ?? [];
