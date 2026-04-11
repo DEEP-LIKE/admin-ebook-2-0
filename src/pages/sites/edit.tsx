@@ -138,14 +138,17 @@ export const SiteEdit = () => {
     if (!id) return;
 
     // 1. Separar vehicles → cars_ids + promotions_ids
-    const vehicles: string[] = values.vehicles || [];
-    values.cars_ids = vehicles
-      .filter((v) => v.startsWith("car_"))
-      .map((v) => parseInt(v.split("_")[1]));
-    values.promotions_ids = vehicles
-      .filter((v) => v.startsWith("promo_"))
-      .map((v) => parseInt(v.split("_")[1]));
-    delete values.vehicles;
+    // Solo procesar si el campo 'vehicles' existe en los valores (evita borrado accidental)
+    if ('vehicles' in values) {
+        const vehicles: string[] = values.vehicles || [];
+        values.cars_ids = vehicles
+          .filter((v) => v.startsWith("car_"))
+          .map((v) => parseInt(v.split("_")[1]));
+        values.promotions_ids = vehicles
+          .filter((v) => v.startsWith("promo_"))
+          .map((v) => parseInt(v.split("_")[1]));
+        delete values.vehicles;
+    }
 
     // 2. Recoger archivos a subir (logo, opengraph, portada)
     const fileFields: { fieldName: string; reftype: string }[] = [
@@ -157,9 +160,9 @@ export const SiteEdit = () => {
     const filesToUpload = fileFields
       .map(({ fieldName, reftype }) => {
         const fileList: any[] = values[fieldName] || [];
-        // Solo archivos nuevos (originFileObj presente = archivo local, no existente)
-        const file = fileList[0]?.originFileObj;
-        return file ? { file, reftype } : null;
+        // BUSCAR el archivo que tenga originFileObj (el nuevo subido)
+        const newFile = fileList.find(f => f.originFileObj)?.originFileObj;
+        return newFile ? { file: newFile, reftype } : null;
       })
       .filter(Boolean) as { file: File; reftype: string }[];
 
