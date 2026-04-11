@@ -1,7 +1,18 @@
+import React, { useState, useEffect } from "react";
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Input, Upload, Image } from "antd";
+import { Form, Input, Upload, Image, message } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
-import { useState, useEffect } from "react";
+
+const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
+
+async function uploadFile(file: File): Promise<number> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_URL}/images`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Upload failed");
+  const data = await res.json();
+  return data.id;
+}
 
 export const PromotionEdit = () => {
   const { formProps, saveButtonProps, query } = useForm();
@@ -9,6 +20,7 @@ export const PromotionEdit = () => {
   
   const [fileList, setFileList] = useState<any[]>([]);
   const [showExistingImage, setShowExistingImage] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (promotionData?.image) {
@@ -25,9 +37,34 @@ export const PromotionEdit = () => {
     }
   };
 
+  const customOnFinish = async (values: any) => {
+    const file = fileList[0]?.originFileObj;
+
+    if (file) {
+      setUploading(true);
+      try {
+        const imageId = await uploadFile(file);
+        values.image_id = imageId;
+        delete values.image;
+      } catch (err) {
+        message.error("Error uploading image");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    } else {
+      // Si no hay archivo nuevo, limpiar el campo 'image' para que no se mande basura al backend
+      delete values.image;
+    }
+
+    return formProps.onFinish?.(values);
+  };
+
+  const isSaving = uploading || (saveButtonProps as any)?.loading;
+
   return (
-    <Edit saveButtonProps={saveButtonProps}>
-      <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
+    <Edit saveButtonProps={{ ...saveButtonProps, loading: isSaving, disabled: isSaving }}>
+      <Form {...formProps} onFinish={customOnFinish} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
           label="Promotion Name"
           name="name"
@@ -90,9 +127,6 @@ export const PromotionEdit = () => {
               <InboxOutlined style={{ color: "#003478" }} />
             </p>
             <p className="ant-upload-text">Click or drag image to upload</p>
-            <p className="ant-upload-hint">
-              Support for a single upload.
-            </p>
           </Upload.Dragger>
         </Form.Item>
       </Form>

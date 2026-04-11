@@ -1,20 +1,30 @@
+import React, { useState, useEffect } from "react";
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Input, InputNumber, Upload, Typography, Image, Button } from "antd";
-import { InboxOutlined, LinkOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useState, useEffect } from "react";
+import { Form, Input, InputNumber, Upload, Typography, Image, message } from "antd";
+import { InboxOutlined, LinkOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
+const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
+
+async function uploadFile(file: File): Promise<number> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_URL}/images`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Upload failed");
+  const data = await res.json();
+  return data.id;
+}
 
 // Custom Input Component to handle value/onChange correctly within Form.Item
 const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
   // Display the slashes as they are
-  const displayValue = value || '/';
+  const displayValue = value || "/";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newVal = e.target.value;
     // Always enforce leading slash if they type something
-    if (newVal && !newVal.startsWith('/')) {
-        newVal = '/' + newVal;
+    if (newVal && !newVal.startsWith("/")) {
+      newVal = "/" + newVal;
     }
     onChange?.(newVal);
   };
@@ -29,7 +39,7 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
         value={displayValue}
         onChange={handleChange}
       />
-      {displayValue && displayValue !== '/' && (
+      {displayValue && displayValue !== "/" && (
         <div
           style={{
             marginTop: 8,
@@ -50,12 +60,13 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
 };
 
 export const CarEdit = () => {
-  const { formProps, saveButtonProps, query, onFinish } = useForm();
+  const { formProps, saveButtonProps, query } = useForm();
   const carData = query?.data?.data;
   
   // Local state for image management
   const [fileList, setFileList] = useState<any[]>([]);
   const [showExistingImage, setShowExistingImage] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   // When data loads, if there is an image, we show it by default
   useEffect(() => {
@@ -66,20 +77,26 @@ export const CarEdit = () => {
 
   const baseUrl = "https://www.sitio-ford.mx";
 
-  const handleFinish = (values: any) => {
-    // values.cotiza/manejo/more are already managed by UrlInput to have the slash, 
-    // but let's be safe and ensure it.
-    // Actually UrlInput `onChange` already sets it with slash.
-    
-    // Antd Upload puts the file in `image.file` or `image.fileList` depending on how it's used.
-    // But since we are using a controlled fileList for the Dragger, we need to ensure 
-    // the form receives the file.
-    // However, `formProps` handles the form state. 
-    // If we use `normFile` or just let Form collect `image`, it might grab the Dragger's internal state.
-    
-    // We will trust the Form to collect `image` from the Form.Item name="image".
-    // But we need to make sure the Dragger inside updates that Item.
-    onFinish(values);
+  const customOnFinish = async (values: any) => {
+    const file = fileList[0]?.originFileObj;
+
+    if (file) {
+      setUploading(true);
+      try {
+        const imageId = await uploadFile(file);
+        values.image_id = imageId;
+        delete values.image;
+      } catch (err) {
+        message.error("Error uploading image");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    } else {
+        delete values.image;
+    }
+
+    return formProps.onFinish?.(values);
   };
 
   // When a new file is added, hide the existing image
@@ -88,17 +105,15 @@ export const CarEdit = () => {
     if (info.fileList.length > 0) {
       setShowExistingImage(false);
     } else if (carData?.image) {
-      // If user removed the new file, show existing again? 
-      // Or maybe they want to delete everything?
-      // Let's assume if list is empty, we show existing if available.
       setShowExistingImage(true);
     }
   };
-  
+
+  const isSaving = uploading || (saveButtonProps as any)?.loading;
 
   return (
-    <Edit saveButtonProps={saveButtonProps}>
-      <Form {...formProps} layout="vertical" style={{ maxWidth: 800 }} onFinish={handleFinish}>
+    <Edit saveButtonProps={{ ...saveButtonProps, loading: isSaving, disabled: isSaving }}>
+      <Form {...formProps} onFinish={customOnFinish} layout="vertical" style={{ maxWidth: 800 }}>
         <Form.Item
           label="Menu Position"
           name="menu_position"
@@ -241,7 +256,6 @@ export const CarEdit = () => {
             <p className="ant-upload-text">
                 {showExistingImage ? "Click or drag to replace image" : "Click or drag car image"}
             </p>
-            <p className="ant-upload-hint">Recommended: 1200x800px</p>
           </Upload.Dragger>
         </Form.Item>
       </Form>

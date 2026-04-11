@@ -151,102 +151,10 @@ export const dataProvider: DataProvider = {
     resource,
     variables,
   }: CreateParams<TVariables>): Promise<CreateResponse<TData>> => {
-    const typedVars = variables as any;
-    let finalVariables = { ...typedVars };
-
-    console.log("Create variables raw:", typedVars);
-
-    if (hasImageUpload(typedVars)) {
-      const imageUpdates = [];
-
-      const singularImage = getRawFile(typedVars.image);
-      if (singularImage) {
-        const formData = new FormData();
-        formData.append("file", singularImage);
-        try {
-          const uploaded = await uploadImage(formData);
-          if (uploaded && uploaded.id) {
-            finalVariables.image_id = uploaded.id;
-            finalVariables.image = uploaded.id;
-          }
-        } catch (error) {
-          console.error("Error uploading singular image", error);
-        }
-      }
-
-      const opengraphFile = getRawFile(typedVars.images?.opengraph);
-      if (opengraphFile) {
-        const formData = new FormData();
-        formData.append("file", opengraphFile);
-        const uploaded = await uploadImage(formData);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "opengraph" });
-      }
-
-      const portadaFile = getRawFile(typedVars.images?.portada);
-      if (portadaFile) {
-        const formData = new FormData();
-        formData.append("file", portadaFile);
-        const uploaded = await uploadImage(formData);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "portada" });
-      }
-
-      const logoFile = getRawFile(typedVars.images?.logo);
-      if (logoFile) {
-        const formData = new FormData();
-        formData.append("file", logoFile);
-        const uploaded = await uploadImage(formData);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "logo" });
-      }
-
-      if (imageUpdates.length > 0) {
-        finalVariables.image_updates = imageUpdates;
-        finalVariables.image_id = imageUpdates[imageUpdates.length - 1].image_id;
-        finalVariables.reftype = imageUpdates[imageUpdates.length - 1].reftype;
-      }
-
-      delete finalVariables.images;
-    }
-
-    // Special handling for 'images' resource
-    if (resource === "images") {
-      const imagesField = typedVars.images;
-      let filesToUpload: File[] = [];
-
-      if (Array.isArray(imagesField)) {
-        filesToUpload = imagesField.map((f: any) => f.originFileObj || f).filter((f) => f instanceof File);
-      } else if (imagesField && imagesField.fileList) {
-        filesToUpload = imagesField.fileList.map((f: any) => f.originFileObj).filter((f: any) => f instanceof File);
-      } else if (imagesField instanceof File) {
-        filesToUpload = [imagesField];
-      }
-
-      let lastResult: any = {};
-      for (const file of filesToUpload) {
-        const formData = new FormData();
-        formData.append("file", file);
-        try {
-          const uploaded = await uploadImage(formData);
-          lastResult = uploaded;
-          if (typedVars.reftype) {
-            await fetch(`${API_URL}/images/${uploaded.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reftype: typedVars.reftype }),
-            });
-            lastResult = { ...lastResult, reftype: typedVars.reftype };
-          }
-        } catch (err) {
-          console.error("Error uploading file in images resource", err);
-          throw err;
-        }
-      }
-      return { data: lastResult };
-    }
-
     const response = await fetch(`${API_URL}/${resource}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(finalVariables),
+      body: JSON.stringify(variables),
     });
     const data = await response.json();
     return { data };
@@ -257,107 +165,10 @@ export const dataProvider: DataProvider = {
     id,
     variables,
   }: UpdateParams<TVariables>): Promise<UpdateResponse<TData>> => {
-    const typedVars = variables as any;
-    let finalVariables = { ...typedVars };
-
-    // ─── Debug: log exactly what files arrived ───────────────────────────────
-    const debugFiles = {
-      logo_file: typedVars.logo_file,
-      logo_rawFile: getRawFile(typedVars.logo_file),
-      portada_file: typedVars.portada_file,
-      portada_rawFile: getRawFile(typedVars.portada_file),
-      opengraph_file: typedVars.opengraph_file,
-      opengraph_rawFile: getRawFile(typedVars.opengraph_file),
-      hasUpload: hasImageUpload(typedVars),
-    };
-    console.log("Update into", resource, id, typedVars);
-    console.log("Update file debug:", debugFiles);
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // Special case: images resource replaces the file directly
-    if (resource === "images") {
-      const file = getRawFile(typedVars.image);
-      if (file) {
-        const formData = new FormData();
-        formData.append("file", file);
-        if (typedVars.reftype) formData.append("reftype", typedVars.reftype);
-        const response = await fetch(`${API_URL}/images/${id}`, {
-          method: "PATCH",
-          body: formData,
-        });
-        const data = await response.json();
-        return { data };
-      }
-    }
-
-    if (hasImageUpload(typedVars) && resource !== "images") {
-      const imageUpdates = [];
-
-      // 1. Singular 'image' field (Cars, Promotions)
-      const singularImage = getRawFile(typedVars.image);
-      if (singularImage) {
-        const formData = new FormData();
-        formData.append("file", singularImage);
-        try {
-          const uploaded = await uploadImage(formData);
-          finalVariables.image_id = uploaded.id;
-          finalVariables.image = uploaded.id;
-        } catch (e) {
-          console.error("Update upload failed", e);
-        }
-      }
-
-      // 2. logo_file → reftype: logo
-      const logoFile = getRawFile(typedVars.logo_file) ?? getRawFile(typedVars.images?.logo);
-      if (logoFile) {
-        console.log("Uploading logo file:", logoFile.name, logoFile.size);
-        const formData = new FormData();
-        formData.append("file", logoFile);
-        const uploaded = await uploadImage(formData);
-        console.log("Logo uploaded:", uploaded);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "logo" });
-      }
-
-      // 3. opengraph_file → reftype: opengraph
-      const opengraphFile = getRawFile(typedVars.opengraph_file) ?? getRawFile(typedVars.images?.opengraph);
-      if (opengraphFile) {
-        console.log("Uploading opengraph file:", opengraphFile.name, opengraphFile.size);
-        const formData = new FormData();
-        formData.append("file", opengraphFile);
-        const uploaded = await uploadImage(formData);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "opengraph" });
-      }
-
-      // 4. portada_file → reftype: portada
-      const portadaFile = getRawFile(typedVars.portada_file) ?? getRawFile(typedVars.images?.portada);
-      if (portadaFile) {
-        console.log("Uploading portada file:", portadaFile.name, portadaFile.size);
-        const formData = new FormData();
-        formData.append("file", portadaFile);
-        const uploaded = await uploadImage(formData);
-        imageUpdates.push({ image_id: uploaded.id, reftype: "portada" });
-      }
-
-      if (imageUpdates.length > 0) {
-        finalVariables.image_updates = imageUpdates;
-        // Backwards compatibility
-        finalVariables.image_id = imageUpdates[imageUpdates.length - 1].image_id;
-        finalVariables.reftype = imageUpdates[imageUpdates.length - 1].reftype;
-      }
-    }
-
-    // Always clean up file fields before sending JSON to API
-    delete finalVariables.images;
-    delete finalVariables.logo_file;
-    delete finalVariables.portada_file;
-    delete finalVariables.opengraph_file;
-
-    console.log("Final PATCH payload:", finalVariables);
-
     const response = await fetch(`${API_URL}/${resource}/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(finalVariables),
+      body: JSON.stringify(variables),
     });
 
     const data = await response.json();

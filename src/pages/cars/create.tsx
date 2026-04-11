@@ -1,16 +1,27 @@
+import React, { useState } from "react";
 import { Create, useForm } from "@refinedev/antd";
-import { Form, Input, InputNumber, Upload, Typography } from "antd";
+import { Form, Input, InputNumber, Upload, Typography, message } from "antd";
 import { InboxOutlined, LinkOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
+const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
+
+async function uploadFile(file: File): Promise<number> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_URL}/images`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Upload failed");
+  const data = await res.json();
+  return data.id;
+}
 
 const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
-  const displayValue = value || '/';
+  const displayValue = value || "/";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newVal = e.target.value;
-    if (newVal && !newVal.startsWith('/')) {
-        newVal = '/' + newVal;
+    if (newVal && !newVal.startsWith("/")) {
+      newVal = "/" + newVal;
     }
     onChange?.(newVal);
   };
@@ -25,7 +36,7 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
         value={displayValue}
         onChange={handleChange}
       />
-      {displayValue && displayValue !== '/' && (
+      {displayValue && displayValue !== "/" && (
         <div
           style={{
             marginTop: 8,
@@ -47,11 +58,35 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
 
 export const CarCreate = () => {
   const { formProps, saveButtonProps } = useForm();
+  const [uploading, setUploading] = useState(false);
   const baseUrl = "https://www.sitio-ford.mx";
 
+  const customOnFinish = async (values: any) => {
+    const fileList = values.image || [];
+    const file = fileList[0]?.originFileObj;
+
+    if (file) {
+      setUploading(true);
+      try {
+        const imageId = await uploadFile(file);
+        values.image_id = imageId;
+        delete values.image;
+      } catch (err) {
+        message.error("Error uploading image");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    return formProps.onFinish?.(values);
+  };
+
+  const isSaving = uploading || (saveButtonProps as any)?.loading;
+
   return (
-    <Create saveButtonProps={saveButtonProps}>
-      <Form {...formProps} layout="vertical" style={{ maxWidth: 800 }}>
+    <Create saveButtonProps={{ ...saveButtonProps, loading: isSaving, disabled: isSaving }}>
+      <Form {...formProps} onFinish={customOnFinish} layout="vertical" style={{ maxWidth: 800 }}>
         <Form.Item
           label="Menu Position"
           name="menu_position"
@@ -180,3 +215,4 @@ export const CarCreate = () => {
     </Create>
   );
 };
+
