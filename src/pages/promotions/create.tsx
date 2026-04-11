@@ -28,7 +28,18 @@ export const PromotionCreate = () => {
           />
         </Form.Item>
 
-        <Form.Item label="Promotion Image" name="image">
+        <Form.Item 
+          label="Promotion Image" 
+          name="image"
+          valuePropName="fileList"
+          getValueFromEvent={(e: any) => {
+            const list = Array.isArray(e) ? e : e?.fileList ?? [];
+            return list.map((f: any) => ({
+                ...f,
+                originFileObj: f.originFileObj ?? f,
+            }));
+          }}
+        >
           <Upload.Dragger
             maxCount={1}
             beforeUpload={() => false}
