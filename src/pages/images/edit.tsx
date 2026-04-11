@@ -1,32 +1,78 @@
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Upload, Select, Input, Image } from "antd";
+import { Form, Upload, Select, Input, Image, message } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
+import { useState } from "react";
+import { useNavigation } from "@refinedev/core";
+
+const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
 export const ImageEdit = () => {
   const { formProps, saveButtonProps, query } = useForm();
+  const [uploading, setUploading] = useState(false);
+  const { list } = useNavigation();
   
   const imageData = query?.data?.data;
+
+  const replaceFile = async (id: number | string, file: File, reftype?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (reftype) formData.append("reftype", reftype);
+
+    const res = await fetch(`${API_URL}/images/${id}`, {
+      method: "PATCH",
+      body: formData,
+    });
+
+    if (!res.ok) {
+        throw new Error(`Replacement failed`);
+    }
+    return res.json();
+  };
+
+  const customOnFinish = async (values: any) => {
+    const fileList = values.image || [];
+    const file = fileList[0]?.originFileObj || fileList[0];
+    const imageId = values.id;
+
+    setUploading(true);
+    try {
+        if (file) {
+            // If there's a new file, do multipart PATCH
+            await replaceFile(imageId, file, values.reftype);
+            message.success("Image replaced and updated successfully");
+        } else {
+            // If only meta changed, use standard Refine PATCH (JSON)
+            await formProps.onFinish?.(values);
+        }
+        list("images");
+    } catch (err: any) {
+        message.error(err.message || "Error updating image");
+    } finally {
+        setUploading(false);
+    }
+  };
 
   const uploadProps: UploadProps = {
     name: "file",
     multiple: false,
     maxCount: 1,
-    beforeUpload: () => false, // Prevent auto-upload
+    beforeUpload: () => false,
     accept: "image/*",
   };
 
-  const normFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e?.fileList;
-  };
-
   return (
-    <Edit saveButtonProps={saveButtonProps}>
+    <Edit 
+        saveButtonProps={{ 
+            ...saveButtonProps, 
+            loading: uploading, 
+            disabled: uploading,
+            onClick: () => formProps.form?.submit()
+        }}
+    >
       <Form
         {...formProps}
+        onFinish={customOnFinish}
         layout="vertical"
         style={{ maxWidth: 800 }}
       >
@@ -36,7 +82,7 @@ export const ImageEdit = () => {
 
         <Form.Item label="Current Image">
              {imageData?.src ? (
-                 <Image width={200} src={imageData.src} />
+                 <Image width={200} src={imageData.src} style={{ borderRadius: 8, border: "1px solid #eee" }} />
              ) : (
                  <span>No image available</span>
              )}
@@ -46,7 +92,10 @@ export const ImageEdit = () => {
           label="Replace Image"
           name="image"
           valuePropName="fileList"
-          getValueFromEvent={normFile}
+          getValueFromEvent={(e: any) => {
+            if (Array.isArray(e)) return e;
+            return e?.fileList;
+          }}
           extra="Upload a new file to replace the current image."
         >
           <Upload.Dragger
@@ -60,16 +109,13 @@ export const ImageEdit = () => {
             <p className="ant-upload-drag-icon">
               <InboxOutlined style={{ color: "#003478", fontSize: 32 }} />
             </p>
-            <p className="ant-upload-text">
-              Click or drag to replace
-            </p>
+            <p className="ant-upload-text">Click or drag to replace</p>
           </Upload.Dragger>
         </Form.Item>
 
         <Form.Item
           label="Reference Type"
           name="reftype"
-          rules={[{ required: false }]}
         >
           <Select
             size="large"
@@ -77,9 +123,9 @@ export const ImageEdit = () => {
             style={{ borderRadius: 8 }}
             allowClear
             options={[
-              { value: "opengraph", label: "OpenGraph" },
+              { value: "logo", label: "Logo" },
               { value: "portada", label: "Portada (Cover)" },
-              { value: "cover", label: "Cover" }
+              { value: "opengraph", label: "OpenGraph" }
             ]}
           />
         </Form.Item>
