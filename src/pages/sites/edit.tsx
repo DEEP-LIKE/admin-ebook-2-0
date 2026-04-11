@@ -128,6 +128,8 @@ export const SiteEdit = () => {
       const cars = siteData.cars_ids?.map((cid: number) => `car_${cid}`) || [];
       const promos = siteData.promotions_ids?.map((pid: number) => `promo_${pid}`) || [];
       formProps.form?.setFieldsValue({ vehicles: [...cars, ...promos] });
+      // Reset deleted states when data is loaded/refreshed
+      setDeletedReftypes([]);
     }
   }, [siteData]);
 
@@ -190,7 +192,13 @@ export const SiteEdit = () => {
     console.log("[edit] Final PATCH payload:", values);
 
     // 4. Delegar a Refine para que haga el PATCH
-    return formProps.onFinish?.(values);
+    try {
+      await formProps.onFinish?.(values);
+      // Si llegamos aquí, se guardó correctamente. Limpiamos estados locales de borrado.
+      setDeletedReftypes([]);
+    } catch (err) {
+      console.error("[edit] PATCH error:", err);
+    }
   };
 
   const isSaving = uploading || (saveButtonProps as any)?.loading;
