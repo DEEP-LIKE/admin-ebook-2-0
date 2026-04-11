@@ -7,14 +7,16 @@ const { Text } = Typography;
 
 // Custom Input Component to handle value/onChange correctly within Form.Item
 const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
-  // Ensure value is a string and handle the leading slash for display
-  const displayValue = value?.startsWith('/') ? value.slice(1) : value || '';
+  // Display the slashes as they are
+  const displayValue = value || '/';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value;
-    // Store with leading slash internally if not empty
-    const storedValue = newVal ? (newVal.startsWith('/') ? newVal : `/${newVal}`) : newVal;
-    onChange?.(storedValue);
+    let newVal = e.target.value;
+    // Always enforce leading slash if they type something
+    if (newVal && !newVal.startsWith('/')) {
+        newVal = '/' + newVal;
+    }
+    onChange?.(newVal);
   };
 
   return (
@@ -27,7 +29,7 @@ const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
         value={displayValue}
         onChange={handleChange}
       />
-      {displayValue && (
+      {displayValue && displayValue !== '/' && (
         <div
           style={{
             marginTop: 8,
@@ -212,13 +214,11 @@ export const CarEdit = () => {
             name="image" 
             valuePropName="fileList"
             getValueFromEvent={(e: any) => {
-                // Return just the file object or the event, depending on what our dataProvider expects.
-                // Our dataProvider now handles { originFileObj } or File or array.
-                // Antd Dragger returns an object { file, fileList } in onChange.
-                if (Array.isArray(e)) {
-                    return e;
-                }
-                return e && e.fileList;
+                const list = Array.isArray(e) ? e : e?.fileList ?? [];
+                return list.map((f: any) => ({
+                    ...f,
+                    originFileObj: f.originFileObj ?? f,
+                }));
             }}
         >
           <Upload.Dragger
@@ -228,6 +228,7 @@ export const CarEdit = () => {
             fileList={fileList}
             onChange={handleUploadChange}
             showUploadList={true}
+            listType="picture"
             style={{
               borderRadius: 12,
               border: "2px dashed #d9d9d9",

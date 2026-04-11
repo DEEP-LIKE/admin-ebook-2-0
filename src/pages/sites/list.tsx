@@ -89,26 +89,36 @@ export const SiteList = () => {
         <Table.Column
           dataIndex="folderName"
           title="Site"
-          render={(value) => (
-            <Space>
-              <Avatar
-                style={{
-                  background: "linear-gradient(135deg, #003478 0%, #0066CC 100%)",
-                  fontWeight: "bold",
-                }}
-              >
-                {value?.slice(0, 2).toUpperCase()}
-              </Avatar>
-              <div>
-                <div style={{ fontWeight: 600, color: "#1a1a1a" }}>
-                  {value}
+          render={(value, record: any) => {
+            const logoImage = record.images?.find((img: any) => img?.reftype?.toLowerCase() === "logo");
+            return (
+              <Space>
+                {logoImage ? (
+                  <Avatar
+                    src={logoImage.src}
+                    style={{ backgroundColor: "white", border: "1px solid #d9d9d9" }}
+                  />
+                ) : (
+                  <Avatar
+                    style={{
+                      background: "linear-gradient(135deg, #003478 0%, #0066CC 100%)",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {value?.slice(0, 2).toUpperCase()}
+                  </Avatar>
+                )}
+                <div>
+                  <div style={{ fontWeight: 600, color: "#1a1a1a" }}>
+                    {value}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#999" }}>
+                    /{value}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#999" }}>
-                  /{value}
-                </div>
-              </div>
-            </Space>
-          )}
+              </Space>
+            );
+          }}
         />
 
         <Table.Column

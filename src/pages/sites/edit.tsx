@@ -2,7 +2,8 @@ import { Edit, useForm, useSelect } from "@refinedev/antd";
 import { Form, Input, Switch, Tabs, Select, Upload, Avatar, Space, Typography, Button, Popconfirm, message } from "antd";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useParams } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Tag } from "antd";
 
 const API_URL = "https://ford-api-ford-api.ppm09i.easypanel.host";
 
@@ -20,6 +21,13 @@ export const SiteEdit = () => {
     optionValue: "id",
     pagination: { pageSize: 1000 },
     sorters: [{ field: "menu_position", order: "asc" }],
+  });
+
+  const { selectProps: promoSelectProps, query: promoQueryResult } = useSelect({
+    resource: "promotions",
+    optionLabel: "name",
+    optionValue: "id",
+    pagination: { pageSize: 1000 },
   });
 
   const { selectProps: contactSelectProps, query: contactQueryResult } = useSelect({
@@ -57,13 +65,22 @@ export const SiteEdit = () => {
     }
   };
 
-  const carOptions =
-    carQueryResult.data?.data?.map((item: any) => ({
+  const carOptions = [
+    ...(carQueryResult.data?.data?.map((item: any) => ({
       label: item.name,
-      value: item.id,
+      value: `car_${item.id}`,
       image: item.image?.src,
-      desc: item.menu_position,
-    })) || [];
+      desc: `Position: ${item.menu_position}`,
+      type: 'Car'
+    })) || []),
+    ...(promoQueryResult.data?.data?.map((item: any) => ({
+      label: item.name,
+      value: `promo_${item.id}`,
+      image: item.image?.src,
+      desc: item.description || 'Promotion',
+      type: 'Promotion'
+    })) || [])
+  ];
 
   const contactOptions =
     contactQueryResult.data?.data?.map((item: any) => ({
@@ -81,9 +98,34 @@ export const SiteEdit = () => {
     }));
   };
 
+  useEffect(() => {
+    if (siteData) {
+      const cars = siteData.cars_ids?.map((id: number) => `car_${id}`) || [];
+      const promos = siteData.promotions_ids?.map((id: number) => `promo_${id}`) || [];
+      formProps.form?.setFieldsValue({
+        vehicles: [...cars, ...promos],
+      });
+    }
+  }, [siteData, formProps.form]);
+
+  const customOnFinish = (values: any) => {
+    const vehicles = values.vehicles || [];
+    values.cars_ids = vehicles
+      .filter((v: string) => v.startsWith("car_"))
+      .map((v: string) => parseInt(v.split("_")[1]));
+      
+    values.promotions_ids = vehicles
+      .filter((v: string) => v.startsWith("promo_"))
+      .map((v: string) => parseInt(v.split("_")[1]));
+      
+    delete values.vehicles;
+    
+    return formProps.onFinish?.(values);
+  };
+
   return (
     <Edit saveButtonProps={saveButtonProps}>
-      <Form {...formProps} layout="vertical" style={{ maxWidth: 800 }}>
+      <Form {...formProps} onFinish={customOnFinish} layout="vertical" style={{ maxWidth: 800 }}>
         <Tabs
           defaultActiveKey="general"
           items={[
@@ -185,16 +227,15 @@ export const SiteEdit = () => {
             },
             {
               key: "cars",
-              label: "Cars",
+              label: "Vehicles & Promotions",
               children: (
-                <Form.Item label="Select Cars" name="cars_ids" help="Select the cars available for this site">
+                <Form.Item label="Select Cars & Promotions" name="vehicles" help="Select the cars and promotions available for this site">
                   <Select
-                    {...carSelectProps}
                     mode="multiple"
-                    placeholder="Select cars..."
+                    placeholder="Select cars and promotions..."
                     style={{ width: "100%" }}
                     options={carOptions}
-                    onSearch={undefined}
+                    loading={carSelectProps.loading || promoSelectProps.loading}
                     filterOption={(input, option) =>
                       (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                     }
@@ -202,9 +243,14 @@ export const SiteEdit = () => {
                       <Space>
                         <Avatar shape="square" src={option.data.image} alt={option.data.label} size="large" />
                         <div style={{ display: "flex", flexDirection: "column" }}>
-                          <Typography.Text strong>{option.data.label}</Typography.Text>
+                          <Space>
+                            <Typography.Text strong>{option.data.label}</Typography.Text>
+                            <Tag color={option.data.type === 'Promotion' ? 'gold' : 'blue'}>
+                              {option.data.type}
+                            </Tag>
+                          </Space>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            Position: {option.data.desc}
+                            {option.data.desc}
                           </Typography.Text>
                         </div>
                       </Space>

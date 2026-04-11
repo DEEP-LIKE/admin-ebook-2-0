@@ -1,6 +1,7 @@
 import { Create, useForm, useSelect } from "@refinedev/antd";
 import { Form, Input, Switch, Tabs, Select, Upload, Avatar, Space, Typography } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
+import { Tag } from "antd";
 
 export const SiteCreate = () => {
   const { formProps, saveButtonProps } = useForm();
@@ -20,6 +21,13 @@ export const SiteCreate = () => {
     ],
   });
 
+  const { selectProps: promoSelectProps, query: promoQueryResult } = useSelect({
+    resource: "promotions",
+    optionLabel: "name",
+    optionValue: "id",
+    pagination: { pageSize: 1000 },
+  });
+
   const { selectProps: contactSelectProps, query: contactQueryResult } = useSelect({
     resource: "contact_mails",
     optionLabel: "email",
@@ -36,22 +44,48 @@ export const SiteCreate = () => {
   });
 
   // Enhance options with image data for custom rendering
-  const carOptions = carQueryResult.data?.data?.map((item: any) => ({
-    label: item.name,
-    value: item.id,
-    image: item.image?.src,
-    desc: item.menu_position,
-  })) || [];
+  const carOptions = [
+    ...(carQueryResult.data?.data?.map((item: any) => ({
+      label: item.name,
+      value: `car_${item.id}`,
+      image: item.image?.src,
+      desc: `Position: ${item.menu_position}`,
+      type: 'Car'
+    })) || []),
+    ...(promoQueryResult.data?.data?.map((item: any) => ({
+      label: item.name,
+      value: `promo_${item.id}`,
+      image: item.image?.src,
+      desc: item.description || 'Promotion',
+      type: 'Promotion'
+    })) || [])
+  ];
 
   const contactOptions = contactQueryResult.data?.data?.map((item: any) => ({
     label: item.email,
     value: item.id,
   })) || [];
 
+  const customOnFinish = (values: any) => {
+    const vehicles = values.vehicles || [];
+    values.cars_ids = vehicles
+      .filter((v: string) => v.startsWith("car_"))
+      .map((v: string) => parseInt(v.split("_")[1]));
+      
+    values.promotions_ids = vehicles
+      .filter((v: string) => v.startsWith("promo_"))
+      .map((v: string) => parseInt(v.split("_")[1]));
+      
+    delete values.vehicles;
+    
+    return formProps.onFinish?.(values);
+  };
+
   return (
     <Create saveButtonProps={saveButtonProps}>
       <Form
         {...formProps}
+        onFinish={customOnFinish}
         layout="vertical"
         style={{ maxWidth: 800 }}
       >
@@ -143,20 +177,19 @@ export const SiteCreate = () => {
             },
             {
               key: "cars",
-              label: "Cars",
+              label: "Vehicles & Promotions",
               children: (
                 <Form.Item
-                  label="Select Cars"
-                  name="cars"
-                  help="Select the cars available for this site"
+                  label="Select Cars & Promotions"
+                  name="vehicles"
+                  help="Select the cars and promotions available for this site"
                 >
                   <Select
-                    {...carSelectProps}
                     mode="multiple"
-                    placeholder="Select cars..."
+                    placeholder="Select cars and promotions..."
                     style={{ width: "100%" }}
                     options={carOptions}
-                    onSearch={undefined}
+                    loading={carSelectProps.loading || promoSelectProps.loading}
                     filterOption={(input, option) =>
                       (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                     }
@@ -169,9 +202,14 @@ export const SiteCreate = () => {
                           size="large"
                         />
                         <div style={{ display: "flex", flexDirection: "column" }}>
-                          <Typography.Text strong>{option.data.label}</Typography.Text>
+                          <Space>
+                            <Typography.Text strong>{option.data.label}</Typography.Text>
+                            <Tag color={option.data.type === 'Promotion' ? 'gold' : 'blue'}>
+                              {option.data.type}
+                            </Tag>
+                          </Space>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            Position: {option.data.desc}
+                            {option.data.desc}
                           </Typography.Text>
                         </div>
                       </Space>

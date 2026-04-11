@@ -1,9 +1,53 @@
 import { Create, useForm } from "@refinedev/antd";
-import { Form, Input, InputNumber, Upload } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Upload, Typography } from "antd";
+import { InboxOutlined, LinkOutlined } from "@ant-design/icons";
+
+const { Text } = Typography;
+
+const UrlInput = ({ value, onChange, baseUrl, placeholder }: any) => {
+  const displayValue = value || '/';
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newVal = e.target.value;
+    if (newVal && !newVal.startsWith('/')) {
+        newVal = '/' + newVal;
+    }
+    onChange?.(newVal);
+  };
+
+  return (
+    <div>
+      <Input
+        addonBefore={baseUrl}
+        size="large"
+        placeholder={placeholder}
+        style={{ borderRadius: 8 }}
+        value={displayValue}
+        onChange={handleChange}
+      />
+      {displayValue && displayValue !== '/' && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: "8px 12px",
+            background: "#f0f7ff",
+            borderRadius: 6,
+            border: "1px solid #d6e4ff",
+          }}
+        >
+          <LinkOutlined style={{ color: "#1890ff", marginRight: 6 }} />
+          <Text style={{ fontSize: 13, color: "#0050b3" }}>
+            URL completa: <strong>{baseUrl}{displayValue}</strong>
+          </Text>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const CarCreate = () => {
   const { formProps, saveButtonProps } = useForm();
+  const baseUrl = "https://www.sitio-ford.mx";
 
   return (
     <Create saveButtonProps={saveButtonProps}>
@@ -33,27 +77,57 @@ export const CarCreate = () => {
           />
         </Form.Item>
 
-        <Form.Item label="Quote (Cotiza)" name="cotiza">
-          <Input.TextArea
-            rows={3}
-            placeholder="Quote information"
-            style={{ borderRadius: 8 }}
+        <Form.Item
+          label={
+            <span>
+              <strong>Botón de Cotiza</strong>
+              <br />
+              <small style={{ color: "#666", fontWeight: "normal" }}>
+                Ruta relativa para el botón "Cotiza". Ejemplo: /TERRITORY/26/Cotizacion
+              </small>
+            </span>
+          }
+          name="cotiza"
+        >
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY/26/Cotizacion" 
           />
         </Form.Item>
 
-        <Form.Item label="Handling (Manejo)" name="manejo">
-          <Input.TextArea
-            rows={3}
-            placeholder="Handling information"
-            style={{ borderRadius: 8 }}
+        <Form.Item
+          label={
+            <span>
+              <strong>Botón de Prueba de Manejo</strong>
+              <br />
+              <small style={{ color: "#666", fontWeight: "normal" }}>
+                Ruta relativa para el botón "Prueba de Manejo". Ejemplo: /TERRITORY/26/PruebadeManejo
+              </small>
+            </span>
+          }
+          name="manejo"
+        >
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY/26/PruebadeManejo" 
           />
         </Form.Item>
 
-        <Form.Item label="More Info" name="more">
-          <Input.TextArea
-            rows={3}
-            placeholder="Additional information"
-            style={{ borderRadius: 8 }}
+        <Form.Item
+          label={
+            <span>
+              <strong>Botón de Conoce Más</strong>
+              <br />
+              <small style={{ color: "#666", fontWeight: "normal" }}>
+                Ruta relativa para el botón "Conoce Más". Ejemplo: /TERRITORY/26
+              </small>
+            </span>
+          }
+          name="more"
+        >
+          <UrlInput 
+            baseUrl={baseUrl} 
+            placeholder="TERRITORY/26" 
           />
         </Form.Item>
 
@@ -78,10 +152,11 @@ export const CarCreate = () => {
           name="image"
           valuePropName="fileList"
           getValueFromEvent={(e: any) => {
-            if (Array.isArray(e)) {
-              return e;
-            }
-            return e && e.fileList;
+            const list = Array.isArray(e) ? e : e?.fileList ?? [];
+            return list.map((f: any) => ({
+                ...f,
+                originFileObj: f.originFileObj ?? f,
+            }));
           }}
         >
           <Upload.Dragger
